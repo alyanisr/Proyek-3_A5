@@ -177,6 +177,8 @@ function editHistoryQR(button) {
   document.getElementById("url").value = url;
   document.getElementById("title").value = title;
 
+  
+
   document.getElementById("qrForm").dispatchEvent(new Event("submit"));
 }
 
@@ -227,3 +229,55 @@ function convertFileToBase64(file) {
     reader.readAsDataURL(file);
   });
 }
+
+async function loadHistory() {
+  try {
+    const response = await fetch('/qr/show'); // Replace with actual endpoint path
+    const data = await response.json();
+
+    if (!data.success) {
+      console.error(data.error);
+      return;
+    }
+
+    const historyContainer = document.getElementById('historyContainer');
+    historyContainer.innerHTML = ''; // Clear existing content
+
+    // Loop through the styles and create history items
+    data.styles.forEach(style => {
+      const historyItem = document.createElement('div');
+      historyItem.classList.add('history-item');
+
+      historyItem.innerHTML = `
+        <i data-feather="link"></i>
+        <div class="link-details">
+          <p class="title">${style.title || 'No title Available'}</p>
+          <p class="url">${style.url || 'No URL Available'}</p>
+          <p><i data-feather="calendar"></i> ${style.date || 'No Date'}</p>
+        </div>
+        <div class="actions">
+          <button onclick="copyHistoryQR(this)" class="save-btn">
+            <i data-feather="copy"></i> Copy
+          </button>
+          <button onclick="editHistoryQR(this)" class="save-btn">
+            <i data-feather="edit"></i> Edit
+          </button>
+          <button onclick="deleteHistoryQR(this)" class="save-btn">
+            <i data-feather="trash-2"></i> Delete
+          </button>
+        </div>
+      `;
+      
+      historyContainer.appendChild(historyItem);
+    });
+
+    // Re-render icons
+    feather.replace();
+
+  } catch (error) {
+    console.error('Failed to load history:', error);
+  }
+
+}
+
+document.addEventListener('DOMContentLoaded', loadHistory);

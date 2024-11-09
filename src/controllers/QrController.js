@@ -3,6 +3,7 @@ import sharp from 'sharp';
 import path from 'path';
 import { __dirname } from '../../path.js';
 import Qr from '../models/qrModel.js';
+import cryptoRandomString from 'crypto-random-string';
 
 const generateQRCode = async (req, res) => {
   try {
@@ -66,21 +67,13 @@ const qrmain = async(req,res) =>{
 
 const saveQR = async (req, res) => {
   try {
-    const id_qr = '123a'; 
-    const email = 'muhammad.reivan.tif23@polban.ac.id'; 
-    const { imageData, date, color, url, title} = req.body;
-
-    // Check if imageData is a base64 string, if so, remove prefix and convert to Buffer
-    let imageBuffer;
-    if (typeof imageData === 'string') {
-      const base64Data = imageData.replace(/^data:image\/\w+;base64,/, '');
-      imageBuffer = Buffer.from(base64Data, 'base64');
-    } else {
-      imageBuffer = imageData;
-    }
-
+    const id_qr = await uniqueRandomIDqr(); 
+    const email = 'yazid.fauzan.tif23@polban.ac.id'; 
+    const { date} = req.body;
+    const { body } = req;
+    
     // Save binary imageBuffer
-    await Qr.insert(id_qr, imageBuffer, date, email, color,url,title);
+    await Qr.insert(id_qr, date, email, body);
     res.status(200).json({ message: 'QR code saved successfully' });
   } catch (error) {
     console.log(error.message)
@@ -92,35 +85,68 @@ const saveQR = async (req, res) => {
 
 const pickQR = async (req, res) => {
   try {
-    const id  = '123a'; // Use dynamic ID from request params
-    const result = await Qr.show(id);
+    const email = 'yazid.fauzan.tif23@polban.ac.id';
+    const idsResult = await Qr.getid(email);
 
-    if (result.rows.length === 0) {
-      console.log('QR code not found');
+    if (idsResult.rows.length === 0) {
+      console.log('No QR codes found for this email');
       return res.status(404).json({ 
         success: false, 
-        error: 'QR code not found' 
+        error: 'No QR codes found for this email' 
       });
     }
 
-    const qrImage = result.rows[0].qr_image;
+    const styles = [];
+    for (const row of idsResult.rows) {
+      const id = row.id_qr;
+      const styleResult = await Qr.show(id);
 
-    // Ensure qrImage is converted to base64 for web display
-    const base64Image = Buffer.from(qrImage).toString('base64');
-    const imageData = `data:image/png;base64,${base64Image}`;
+      if (styleResult.rows.length > 0) {
+        styles.push(styleResult.rows[0].style);
+      }
+    }
 
-    console.log('QR code retrieved successfully');
+    if (styles.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: 'No styles found for the provided QR codes'
+      });
+    }
+
     res.status(200).json({
       success: true,
-      imageData: imageData
+      styles: styles
     });
+
   } catch (error) {
+    console.error('Error retrieving QR codes:', error);
     res.status(500).json({ 
       success: false, 
-      error: 'Failed to retrieve QR code' 
+      error: 'Failed to retrieve QR codes' 
     });
   }
 };
+
+
+
+
+async function uniqueRandomIDqr() {
+  let id;
+  while (true) {
+    id = cryptoRandomString({ length: 4, type: "alphanumeric" });
+    if (await isIDuniqueqr(id)) {
+      break;
+    }
+  }
+  return id;
+}
+
+async function isIDuniqueqr(id) {
+  const result = await Qr.exists("id_qr", id);
+  // const result = await pool.query(`SELECT EXISTS(SELECT 1 FROM shortlinks WHERE id_shortlink = $1)`, [id]);
+  return !result.rows[0]["exists"];
+}
+
 
 export default{
     generateQRCode,
