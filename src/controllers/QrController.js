@@ -82,10 +82,9 @@ const saveQR = async (req, res) => {
 };
 
 
-
 const pickQR = async (req, res) => {
   try {
-    const email = req.session.email;
+    const email = 'yazid.fauzan.tif23@polban.ac.id';
     const idsResult = await Qr.getid(email);
 
     if (idsResult.rows.length === 0) {
@@ -96,17 +95,20 @@ const pickQR = async (req, res) => {
       });
     }
 
-    const styles = [];
+    const qrData = [];
     for (const row of idsResult.rows) {
       const id = row.id_qr;
       const styleResult = await Qr.show(id);
 
       if (styleResult.rows.length > 0) {
-        styles.push(styleResult.rows[0].style);
+        qrData.push({ 
+          id: id, 
+          style: styleResult.rows[0].style 
+        });
       }
     }
 
-    if (styles.length === 0) {
+    if (qrData.length === 0) {
       return res.status(404).json({
         success: false,
         error: 'No styles found for the provided QR codes'
@@ -115,7 +117,7 @@ const pickQR = async (req, res) => {
 
     res.status(200).json({
       success: true,
-      styles: styles
+      qrData: qrData
     });
 
   } catch (error) {
@@ -126,6 +128,7 @@ const pickQR = async (req, res) => {
     });
   }
 };
+
 
 
 
@@ -147,10 +150,15 @@ async function isIDuniqueqr(id) {
   return !result.rows[0]["exists"];
 }
 
+async function deleteQR(id) {
+  const result = await Qr.delete(id);
+}
+
 
 export default{
     generateQRCode,
     qrmain,
     saveQR,
-    pickQR
+    pickQR,
+    deleteQR
 };

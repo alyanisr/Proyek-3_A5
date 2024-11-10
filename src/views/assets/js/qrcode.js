@@ -166,34 +166,6 @@ async function saveQRCode() {
   }
 }
 
-// History Functions
-function editHistoryQR(button) {
-  const historyItem = button.closest(".history-item");
-  const title = historyItem.querySelector(".title").textContent;
-  const url = historyItem.querySelector(".url").textContent;
-
-  document.getElementById("defaultOpen").click();
-
-  document.getElementById("url").value = url;
-  document.getElementById("title").value = title;
-
-  
-
-  document.getElementById("qrForm").dispatchEvent(new Event("submit"));
-}
-
-function copyHistoryQR(button) {
-  const historyItem = button.closest(".history-item");
-  alert("QR Code copied to clipboard!");
-}
-
-function deleteHistoryQR(button) {
-  const historyItem = button.closest(".history-item");
-  if (confirm("Are you sure you want to delete this QR code?")) {
-    historyItem.remove();
-  }
-}
-
 async function displayQRCode1() {
   try {
     const response = await fetch('/qr/pick', {
@@ -229,10 +201,9 @@ function convertFileToBase64(file) {
     reader.readAsDataURL(file);
   });
 }
-
 async function loadHistory() {
   try {
-    const response = await fetch('/qr/show'); // Replace with actual endpoint path
+    const response = await fetch('/qr/show');
     const data = await response.json();
 
     if (!data.success) {
@@ -241,19 +212,23 @@ async function loadHistory() {
     }
 
     const historyContainer = document.getElementById('historyContainer');
-    historyContainer.innerHTML = ''; // Clear existing content
+    historyContainer.innerHTML = '';
 
-    // Loop through the styles and create history items
-    data.styles.forEach(style => {
+    data.qrData.forEach(item => {
       const historyItem = document.createElement('div');
       historyItem.classList.add('history-item');
+      
+      // Store data as data attributes
+      historyItem.dataset.id = item.id; // Tambahkan ID ke dataset
+      historyItem.dataset.color = item.style.color || "#000000";
+      historyItem.dataset.logo = item.style.imageData || "";
 
       historyItem.innerHTML = `
         <i data-feather="link"></i>
         <div class="link-details">
-          <p class="title">${style.title || 'No title Available'}</p>
-          <p class="url">${style.url || 'No URL Available'}</p>
-          <p><i data-feather="calendar"></i> ${style.date || 'No Date'}</p>
+          <p class="title">${item.style.title || 'No title available'}</p>
+          <p class="url">${item.style.url || 'No URL available'}</p>
+          <p><i data-feather="calendar"></i> ${new Date(item.style.date).toLocaleDateString() || 'No date available'}</p>
         </div>
         <div class="actions">
           <button onclick="copyHistoryQR(this)" class="save-btn">
@@ -267,17 +242,198 @@ async function loadHistory() {
           </button>
         </div>
       `;
-      
+
       historyContainer.appendChild(historyItem);
     });
 
-    // Re-render icons
     feather.replace();
 
   } catch (error) {
     console.error('Failed to load history:', error);
   }
+}
 
+async function editHistoryQR(button) {
+  try {
+    // Get the history item element
+    const historyItem = button.closest('.history-item');
+    const title = historyItem.querySelector(".title").textContent;
+    const url = historyItem.querySelector(".url").textContent;
+    const color = historyItem.dataset.color;
+    const logoDataURI = historyItem.dataset.logo;
+
+    // Switch to Create tab and show result section
+    document.getElementById("defaultOpen").click();
+    document.getElementById("inputSection").style.display = "none";
+    document.getElementById("resultSection").style.display = "block";
+
+    // Update the result section with existing data
+    document.getElementById("qrTitle").textContent = "Title: " + title;
+    document.getElementById("qrUrl").textContent = "URL: " + url;
+
+    // Create FormData object
+    const formData = new FormData();
+    formData.append("url", url);
+    formData.append("title", title);
+    formData.append("color", color || "#000000");
+
+    // Convert base64 logo to File object if it exists
+    if (logoDataURI) {
+      const logoFile = await base64ToFile(logoDataURI, "logo.png");
+      formData.append("logo", logoFile);
+    }
+
+    // Generate QR code
+    const response = await fetch("/qr/generateQR", {
+      method: "POST",
+      body: formData
+    });
+
+    const data = await response.json();
+    
+    if (data.success) {
+      // Update currentQRCode object
+      currentQRCode.data = {
+        title: title,
+        url: url,
+        imageData: data.imageData
+      };
+      
+      currentQRCode.style = {
+        color: color || "#000000",
+        logo: data.logo || null
+      };
+
+      // Display the result
+      displayQRResult(data);
+
+      // Update color picker value
+      document.getElementById("colorPicker").value = color;
+      
+      // Update color selection UI
+      document.querySelectorAll(".color-option").forEach(opt => {
+        opt.classList.remove("selected");
+        if (opt.style.backgroundColor === color) {
+          opt.classList.add("selected");
+        }
+      });
+    }
+  } catch (error) {
+    console.error("Error:", error);
+    alert("Failed to load QR code for editing.");
+  }
+}
+
+// Helper function to convert base64 to File object
+async function base64ToFile(dataURI, fileName) {
+  // Get the base64 content after the comma
+  const base64Content = dataURI.split(',')[1];
+  // Convert base64 to blob
+  const byteString = atob(base64Content);
+  const ab = new ArrayBuffer(byteString.length);
+  const ia = new Uint8Array(ab);
+  
+  for (let i = 0; i < byteString.length; i++) {
+    ia[i] = byteString.charCodeAt(i);
+  }
+  
+  const blob = new Blob([ab], { type: 'image/png' });
+  return new File([blob], fileName, { type: 'image/png' });
+}
+
+async function copyHistoryQR(button) {
+  try {
+    const historyItem = button.closest(".history-item");
+    
+    // Get the stored QR data
+    const title = historyItem.querySelector(".title").textContent;
+    const url = historyItem.querySelector(".url").textContent;
+    const color = historyItem.dataset.color;
+    const logoDataURI = historyItem.dataset.logo;
+
+    // Create FormData object to regenerate QR with styles
+    const formData = new FormData();
+    formData.append("url", url);
+    formData.append("title", title);
+    formData.append("color", color || "#000000");
+
+    // Convert base64 logo to File if it exists
+    if (logoDataURI) {
+      // Get the base64 content after the comma
+      const base64Content = logoDataURI.split(',')[1];
+      // Convert base64 to blob
+      const byteString = atob(base64Content);
+      const ab = new ArrayBuffer(byteString.length);
+      const ia = new Uint8Array(ab);
+      
+      for (let i = 0; i < byteString.length; i++) {
+        ia[i] = byteString.charCodeAt(i);
+      }
+      
+      const blob = new Blob([ab], { type: 'image/png' });
+      const logoFile = new File([blob], "logo.png", { type: 'image/png' });
+      formData.append("logo", logoFile);
+    }
+
+    // Generate QR code with current styles
+    const response = await fetch("/qr/generateQR", {
+      method: "POST",
+      body: formData
+    });
+
+    const data = await response.json();
+    
+    if (data.success) {
+      // Convert the Data URI to a Blob
+      const response = await fetch(data.imageData);
+      const blob = await response.blob();
+      
+      // Create a ClipboardItem with the blob
+      const item = new ClipboardItem({ "image/png": blob });
+      
+      // Write to clipboard
+      await navigator.clipboard.write([item]);
+      alert("QR Code copied to clipboard!");
+    } else {
+      throw new Error('Failed to generate QR code');
+    }
+  } catch (error) {
+    console.error('Error copying QR code:', error);
+    alert("Failed to copy QR code to clipboard. Please try again.");
+  }
+}
+
+async function deleteHistoryQR(button) {
+  try {
+    const historyItem = button.closest(".history-item");
+    const title = historyItem.querySelector(".title").textContent;
+    const id = historyItem.dataset.id; // Tambahkan data-id saat membuat history item
+
+    if (!confirm(`Are you sure you want to delete the QR code "${title}"?`)) {
+      return;
+    }
+
+    // Send delete request to the server dengan ID
+    const response = await fetch(`/qr/delete/${id}`, {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    });
+
+    const data = await response.json();
+
+    if (!data.success) {
+      throw new Error(data.error || 'Failed to delete QR code');
+    }
+
+    // Remove the item from the UI only after successful server deletion
+    historyItem.remove();
+
+  } catch (error) {
+    console.error('Error deleting QR code:', error);
+    alert('Failed to delete QR code. Please try again.');
+  }
 }
 
 document.addEventListener('DOMContentLoaded', loadHistory);

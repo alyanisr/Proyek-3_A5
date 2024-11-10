@@ -19,4 +19,8 @@ Qr.exists = async (field, value) => {
     return await pool.query(sql, [value]);
 }
 
+Qr.delete = async (id) => {
+    return await pool.query('DELETE FROM qr_codes WHERE ID = $1',[id])
+}
+
 export default Qr;

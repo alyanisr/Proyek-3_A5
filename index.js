@@ -30,7 +30,7 @@ app.use('/assets', express.static(path.join(__dirname, 'src', 'views', 'assets')
 
 app.use('/account', routerAccount);
 
-app.use('/qr',loginSession, routerQr);
+app.use('/qr', routerQr);
 
 app.use('/linktree', loginSession, routerLinktree);
 
