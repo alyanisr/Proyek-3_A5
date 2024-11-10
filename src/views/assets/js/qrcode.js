@@ -406,28 +406,22 @@ async function copyHistoryQR(button) {
 async function deleteHistoryQR(button) {
   try {
     const historyItem = button.closest(".history-item");
-    const title = historyItem.querySelector(".title").textContent;
-    const id = historyItem.dataset.id; // Tambahkan data-id saat membuat history item
+    const id = historyItem.dataset.id;
 
-    if (!confirm(`Are you sure you want to delete the QR code "${title}"?`)) {
+    if (!confirm("Are you sure you want to delete this QR code?")) {
       return;
     }
 
-    // Send delete request to the server dengan ID
     const response = await fetch(`/qr/delete/${id}`, {
-      method: 'DELETE',
-      headers: {
-        'Content-Type': 'application/json'
-      }
+      method: 'DELETE'
     });
 
     const data = await response.json();
 
     if (!data.success) {
-      throw new Error(data.error || 'Failed to delete QR code');
+      throw new Error(data.error);
     }
 
-    // Remove the item from the UI only after successful server deletion
     historyItem.remove();
 
   } catch (error) {

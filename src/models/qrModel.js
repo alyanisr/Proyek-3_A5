@@ -15,12 +15,22 @@ Qr.getid = async(email) => {
 }
 
 Qr.exists = async (field, value) => {
-    const sql = format(`SELECT EXISTS(SELECT 1 FROM shortlinks WHERE %I = $1)`, field);
+    const sql = format(`SELECT EXISTS(SELECT 1 FROM qr_codes WHERE %I = $1)`, field);
     return await pool.query(sql, [value]);
 }
 
 Qr.delete = async (id) => {
-    return await pool.query('DELETE FROM qr_codes WHERE ID = $1',[id])
+    return await pool.query('DELETE FROM qr_codes WHERE id_qr = $1',[id])
+}
+
+Qr.checkOwner = async(id_qr, email) =>{
+    const query = `
+      SELECT EXISTS(
+        SELECT 1 FROM qr_codes 
+        WHERE id_qr = $1 AND email = $2
+      )
+    `;
+    return await pool.query(query, [id_qr, email]);
 }
 
 export default Qr;

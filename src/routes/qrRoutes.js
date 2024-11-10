@@ -16,6 +16,6 @@ routerQr.route("/saveqr").post(QrController.saveQR);
 
 routerQr.route("/show").get(QrController.pickQR);
 
-routerQr.route("/delete").delete(QrController.deleteQR)
+routerQr.route("/delete/:id").delete(QrController.deleteQR)
 
 export default routerQr;
