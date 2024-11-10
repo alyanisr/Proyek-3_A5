@@ -180,7 +180,7 @@ const login = async(req,res) =>{
             const isPasswordCorrect = await argon2.verify(hashedPassword,password);
 
             if (isPasswordCorrect) {
-                req.session.userId = email;
+                req.session.email = email;
                 res.redirect('/')
             } else {
                 return res.status(401).send({ msg: 'Password salah!' });
@@ -219,7 +219,14 @@ const forgpass = async (req, res) => {
 };
 
 
-
+const logout = async(req,res) => {
+    req.session.destroy((err) => {
+        if (err){
+            return res.status(500).send('Gagal Logout')
+        }
+        res.redirect('/account/login')
+    })
+}
 
 export default{
     sendVerificationEmail,
@@ -232,5 +239,6 @@ export default{
     getEmailFromSession,
     logon,
     forgpass,
-    lgcforgpass
+    lgcforgpass,
+    logout
 }

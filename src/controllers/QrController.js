@@ -68,7 +68,7 @@ const qrmain = async(req,res) =>{
 const saveQR = async (req, res) => {
   try {
     const id_qr = await uniqueRandomIDqr(); 
-    const email = 'yazid.fauzan.tif23@polban.ac.id'; 
+    const email = req.session.email; 
     const { date} = req.body;
     const { body } = req;
     
@@ -85,7 +85,7 @@ const saveQR = async (req, res) => {
 
 const pickQR = async (req, res) => {
   try {
-    const email = 'yazid.fauzan.tif23@polban.ac.id';
+    const email = req.session.email;
     const idsResult = await Qr.getid(email);
 
     if (idsResult.rows.length === 0) {

@@ -32,12 +32,12 @@
         <a href="#create" class="sidebar-link active"
           ><i data-feather="plus"></i> <span>Create New</span></a
         >
-        <a href="http://localhost:8000/"><i data-feather="home"></i> <span>Home</span></a>
-        <a href="http://localhost:8000/shortlink"
+        <a href="/"><i data-feather="home"></i> <span>Home</span></a>
+        <a href="/shortlink"
           ><i data-feather="link-2"></i> <span>URL Shortener</span></a
         >
-        <a href="http://localhost:8000/qr"><i data-feather="grid"></i> <span>QR Codes</span></a>
-        <a href="http://localhost:8000/linktree"
+        <a href="/qr"><i data-feather="grid"></i> <span>QR Codes</span></a>
+        <a href="/linktree"
           ><i data-feather="trending-up"></i> <span>Link Tree</span></a
         >
       </div>
@@ -57,7 +57,7 @@
       </div>
         <div class="dropdown" id="dropdown">
           <!-- <p>Support</p> -->
-          <a href="login.html">Logout</a>
+          <a href="/account/logout">Logout</a>
         </div>
       </div>
     </nav>
@@ -69,17 +69,17 @@
         <div class="button-card">
           <p class="icon"><i data-feather="link"></i></p>
           <p>URL Shortener</p>
-          <button>Go to links</button>
-        </div>
+          <button onclick="window.location.href='/shortlink'">Go to links</button>
+      </div>         
         <div class="button-card">
           <p class="icon"><i data-feather="grid"></i></p>
           <p>QR Codes</p>
-          <button>Go to QR</button>
+          <button onclick="window.location.href='/qr'">Go to QR</button>
         </div>
         <div class="button-card">
           <p class="icon"><i data-feather="trending-up"></i></p>
           <p>Linktree</p>
-          <button>Go to Tree</button>
+          <button onclick="window.location.href='/linktree'">Go to Tree</button>
         </div>
       </div>
     </div>

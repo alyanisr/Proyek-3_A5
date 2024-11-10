@@ -24,15 +24,15 @@ app.use(session({
 
 app.use(express.json());
 
-app.use('/shortlink', routerShortlink);
+app.use('/shortlink',loginSession, routerShortlink);
 
 app.use('/assets', express.static(path.join(__dirname, 'src', 'views', 'assets')));
 
 app.use('/account', routerAccount);
 
-app.use('/qr', routerQr);
+app.use('/qr',loginSession, routerQr);
 
-app.use('/linktree', routerLinktree);
+app.use('/linktree', loginSession, routerLinktree);
 
 
 app.listen(PORT, () => {

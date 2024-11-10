@@ -35,4 +35,6 @@ routerAccount.route('/forgot-password')
     .get(accountController.forgpass)
     .post(accountController.lgcforgpass)
 
+routerAccount.route('/logout')
+    .get(accountController.logout)
 export default routerAccount;
