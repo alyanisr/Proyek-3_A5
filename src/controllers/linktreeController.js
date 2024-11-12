@@ -5,6 +5,7 @@ import { __dirname } from "../../path.js";
 import path from "path";
 import { shorten } from "./shortlinkController.js";
 import LtHistory from "../models/linktreeHistoryModel.js";
+import Shortlink from "../models/shortlinkModel.js";
 
 async function isIDunique(id) {
   const result = await Linktree.exists("id_linktree", id);
@@ -51,6 +52,12 @@ const createRoom = async (req, res) => {
     try{
         const { body } = req;
         let custom;
+
+        if ((await Shortlink.exists("short_url", body.customUrl)).rows[0]["exists"]){
+          res.status(400).send("custom url already exists");
+          return;
+        }
+
         const id = await uniqueRandomID();
         if (body.customUrl.length > 0){
             custom = body.customUrl;
@@ -58,8 +65,9 @@ const createRoom = async (req, res) => {
         else{
             custom = id;
         }
-        const shortUrl = await shorten(`http://localhost:8000/linktree/room?id=${id}`, null, custom);
-        await Linktree.insert(id, null, custom, null, null);
+
+        const shortUrl = await shorten(`http://localhost:8000/linktree/room?id=${id}`, req.session.email, custom);
+        await Linktree.insert(id,body.title, custom, req.session.email, null);
         res.status(303).redirect(`http://localhost:8000/linktree/room-edit?id=${id}`);
     }
     catch (e){
@@ -103,9 +111,23 @@ async function insertButtons(id, buttonData, email = null) {
 const getLinktree = async (req, res) => {
   try {
     const result = await Linktree.getBy("id_linktree", req.params.id);
+   
+    if (result.rowCount === 0) {
+      res.status(404).send("Not-found");
+      return;
+    } else if (result.rows[0]["email"] != req.session.email) {
+      res.status(401).send("Unathorized");
+      return;
+    } 
+
+    const buttonData = await Button.getByExceptID("id_linktree", req.params.id);
+
     res.status(200).send({
       id: result.rows[0]["id_linktree"],
       title: result.rows[0]["linktree_title"],
+      bio: result.rows[0]["bio"],
+      style: result.rows[0]["style"],
+      btnArray: buttonData.rows,
       url: "http://localhost:8000/" + result.rows[0]["linktree_url"],
     });
   } catch (e) {

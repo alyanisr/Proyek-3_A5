@@ -4,7 +4,7 @@ import linktreeController from "../controllers/linktreeController.js";
 
 routerLinktree.route("/").get(linktreeController.linktreeMenu);
 
-routerLinktree.route("/config").post(linktreeController.createRoom);
+routerLinktree.route("/create-room").post(linktreeController.createRoom);
 
 routerLinktree.route("/room").get(linktreeController.linktreeRoom);
 

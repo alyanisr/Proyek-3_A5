@@ -12,6 +12,11 @@ Button.getBy = async (field, value) => {
     return await pool.query(sql, [value]);
 }
 
+Button.getByExceptID = async (field, value) => {
+    const sql = format(`SELECT button_position, button_name, id_shortlink FROM buttons WHERE %I = $1 ORDER BY button_position ASC`, field);
+    return await pool.query(sql, [value]);
+}
+
 Button.insert = async (name, position, idLinktree, idShortlink) => {
     return await pool.query(`INSERT INTO buttons VALUES ($1, $2, $3, $4)` ,[name, position, idLinktree, idShortlink]);
 }

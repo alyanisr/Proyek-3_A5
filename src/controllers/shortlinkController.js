@@ -20,7 +20,7 @@ const createSl = async (req, res) => {
       } else {
         custom = body.custom;
       }
-      await Shortlink.insert(id, body.destination, custom, body.email);
+      await Shortlink.insert(id, body.destination, custom, req.session.email);
       res.status(303).redirect(`http://localhost:8000/shortlink/res?id=${id}`);
     }
   } catch (err) {
@@ -110,7 +110,7 @@ const getByID = async (req, res) => {
     if (result.rowCount === 0) {
       res.status(404).send("Not-found");
       return;
-    } else if (result.rows[0]["email"] != body.email) {
+    } else if (result.rows[0]["email"] != req.session.email) {
       res.status(401).send("Unathorized");
       return;
     } else {

@@ -33,7 +33,7 @@ app.use('/account', routerAccount);
 
 app.use('/qr',loginSession, routerQr);
 
-app.use('/linktree', loginSession, routerLinktree);
+app.use('/linktree',  routerLinktree);
 
 
 app.listen(PORT, () => {
