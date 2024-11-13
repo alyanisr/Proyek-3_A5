@@ -135,7 +135,50 @@ function generateQRCodeFromUrl(url) {
   );
 }
 
-let currentShortlink = "plb.sh/AbC123"; // Variabel untuk menyimpan shortlink yang akan disalin
+// Fungsi untuk render data shortlink history ke HTML
+async function renderShortlinkHistory() {
+  try {
+    const response = await fetch("/shortlink/history");
+    const data = await response.json();
+
+    if (!data.success) {
+      console.error(data.error);  
+      return;
+    }
+    
+    const historyContainer = document.getElementById("History");
+    historyContainer.innerHTML = '';
+
+    data.rows.forEach(item => {
+      const historyItem = document.createElement("div");
+      historyItem.className = "history-item";
+
+      historyItem.dataset.id = item.id;
+      historyItem.innerHTML = `
+        <i data-feather="link-2"></i>
+        <div class="link-details">
+          <p class="shortUrl">${item.short_url || 'No shorts available'} </p>
+          <p class="longUrl">${item.long_url || 'No url available'}</p>
+          <p><i data-feather="calendar"></i> ${item.time_shortlink_created}</p>
+        </div>
+        <div class="actions">
+          <button><i data-feather="copy"></i> Copy</button>
+          <button><i data-feather="share-2"></i> Share</button>
+          <button><i data-feather="edit"></i> Edit</button>
+          <button><i data-feather="trash-2"></i> Delete</button>
+        </div>
+      `;
+    
+      historyContainer.appendChild(historyItem);
+      feather.replace(); // Untuk memperbarui ikon Feather
+    });
+    
+  } catch (error) {
+    console.error("Error fetching shortlink history:", error);
+  }
+}
+
+document.addEventListener("DOMContentLoaded", renderShortlinkHistory());
 
 function copyShortlink() {
   if (currentShortlink) {

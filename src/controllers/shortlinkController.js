@@ -203,19 +203,18 @@ const shortlinkMenu = async (req, res) => {
 
 const getShortlinksPaginated = async (req, res) => {
   try {
-    const { email } = req.params;
-    const limit = parseInt(req.query.limit) || 10; // default limit 10
-    const page = parseInt(req.query.page) || 1; // default page 1
-    const offset = (page - 1) * limit;
-
-    const result = await Shortlink.getByEmailPaginated(email, limit, offset);
+    const email = 'hafidz.zaenul.tif23@polban.ac.id';
+    const result = await Shortlink.getByEmailPaginated(email);
 
     if (result.rowCount === 0) {
       res.status(404).send("No shortlinks found for the given email");
       return;
     }
 
-    res.status(200).json(result.rows);
+    res.status(200).json({
+      success: true,
+      rows: result.rows
+    });
   } catch (error) {
     res.status(500).send(error.message);
   }
