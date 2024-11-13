@@ -124,7 +124,7 @@ const kirim_otp = async (req, res) => {
         const isOtpValid = crypto.timingSafeEqual(Buffer.from(otp), Buffer.from(storedOtp));
 
         if (isOtpValid && Date.now() < expiresAt) {
-            await account.insert(email, hashedPassword, "inactive");
+            await account.insert(email, hashedPassword, "active");
             delete otpStorage[email];
             delete verificationTokenStorage[email];
             
