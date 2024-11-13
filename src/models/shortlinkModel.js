@@ -31,10 +31,10 @@ Shortlink.exists = async (field, value) => {
     return await pool.query(sql, [value]);
 }
 
-Shortlink.getByEmailPaginated = async (email, limit, offset) => {
+Shortlink.getByEmailPaginated = async (email) => {
     return await pool.query(
-        `SELECT short_url, long_url, time_shortlink_created FROM shortlinks WHERE email = $1 ORDER BY time_shortlink_created DESC LIMIT $2 OFFSET $3`,
-        [email, limit, offset]
+        `SELECT id_shortlink, short_url, long_url, time_shortlink_created FROM shortlinks WHERE email = $1 ORDER BY time_shortlink_created DESC`,
+        [email]
     );
 };
 

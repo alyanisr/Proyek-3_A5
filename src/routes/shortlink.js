@@ -16,8 +16,6 @@ routerShortlink.route("/res").get(shortlinkController.createResult);
 
 routerShortlink.route("/get/:id").get(shortlinkController.getByID);
 
-routerShortlink
-  .route("/email/:email")
-  .get(shortlinkController.getShortlinksPaginated);
+routerShortlink.route("/history").get(shortlinkController.getShortlinksPaginated);
 
 export default routerShortlink;
