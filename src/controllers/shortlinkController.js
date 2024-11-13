@@ -39,7 +39,7 @@ const updateSl = async (req, res) => {
       return;
     }
 
-    if (result.rows[0]["email"] != body.email) {
+    if (result.rows[0]["email"] != req.session.email) {
       res.status(401).send("Unathorized");
       return;
     }
@@ -97,7 +97,7 @@ const createResult = async (req, res) => {
   try {
     res
       .status(200)
-      .sendFile(path.join(__dirname, "src", "views", "generate.html")); //placeholder for results page
+      .sendFile(path.join(__dirname, "src", "views", "generate.html"));
   } catch (err) {
     res.status(500).send(err.message);
   }
@@ -117,7 +117,7 @@ const getByID = async (req, res) => {
       res.status(200).send({
         id_shortlink: result.rows[0]["id_shortlink"],
         long_url: result.rows[0]["long_url"],
-        short_url: result.rows[0]["short_url"], //add qr url for later
+        short_url: result.rows[0]["short_url"]
       });
     }
   } catch (err) {

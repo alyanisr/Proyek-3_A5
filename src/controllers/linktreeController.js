@@ -87,7 +87,6 @@ const saveContent = async (req, res) => {
             await Button.delete("id_linktree",id);
             Linktree.update("time_linktree_created", "now()::timestamp", "id_linktree", id);
         }
-        console.log(id)
         await Linktree.patch(body.title, body.bio, body.style, id);
         await insertButtons(id, body.btnArray);
         res.status(200).send("success");

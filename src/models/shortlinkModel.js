@@ -23,8 +23,7 @@ Shortlink.delete = async (field, value) => {
 }
 
 Shortlink.insert = async (id_shortlink, long_url, short_url, email) => {
-//    return await pool.query(`INSERT INTO shortlinks VALUES ($1, $2, $3, now()::timestamp, $4, $5)`, [id_shortlink, long_url, short_url, email, id_qr]);
-    return await pool.query(`INSERT INTO shortlinks VALUES ($1, $2, $3, now()::timestamp, $4)`, [id_shortlink, long_url, short_url, email]);
+    return await pool.query(`INSERT INTO shortlinks(id_shortlink, long_url, short_url, time_shortlink_created, email) VALUES ($1, $2, $3, now()::timestamp, $4)`, [id_shortlink, long_url, short_url, email]);
 }
 
 Shortlink.exists = async (field, value) => {
