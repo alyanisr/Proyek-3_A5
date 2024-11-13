@@ -203,7 +203,7 @@ const shortlinkMenu = async (req, res) => {
 
 const getShortlinksPaginated = async (req, res) => {
   try {
-    const email = 'hafidz.zaenul.tif23@polban.ac.id';
+    const email = req.session.email;
     const result = await Shortlink.getByEmailPaginated(email);
 
     if (result.rowCount === 0) {

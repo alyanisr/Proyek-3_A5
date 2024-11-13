@@ -25,7 +25,7 @@ app.use(session({
 
 app.use(express.json());
 
-app.use('/shortlink',routerShortlink);
+app.use('/shortlink',loginSession, routerShortlink);
 
 app.use('/assets', express.static(path.join(__dirname, 'src', 'views', 'assets')));
 
