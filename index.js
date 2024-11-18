@@ -10,6 +10,7 @@ import { checkAuth } from "./src/middleware/checkAuth.js";
 import routerLinktree from "./src/routes/linktree.js";
 import { loginSession } from "./src/middleware/loginSessionMid.js";
 import { log } from "console";
+import routerext from "./src/routes/external.js";
 
 const PORT = 8000;
 const app = express();
@@ -34,6 +35,8 @@ app.use('/account', routerAccount);
 app.use('/qr',loginSession, routerQr);
 
 app.use('/linktree',  routerLinktree);
+
+app.use('/tes',routerext);
 
 
 app.listen(PORT, () => {

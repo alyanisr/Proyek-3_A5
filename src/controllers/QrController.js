@@ -4,6 +4,7 @@ import path from 'path';
 import { __dirname } from '../../path.js';
 import Qr from '../models/qrModel.js';
 import cryptoRandomString from 'crypto-random-string';
+import fs from 'fs/promises';
 
 const generateQRCode = async (req, res) => {
   try {
@@ -16,6 +17,7 @@ const generateQRCode = async (req, res) => {
 
     // Generate QR code
     const qrCodeBuffer = await qr.toBuffer(url, {
+      errorCorrectionLevel: 'H',
       color: {
         dark: color || '#000000',
         light: '#ffffff'
@@ -199,10 +201,113 @@ const deleteQR = async (req, res) => {
   }
 };
 
+const generateQRext = async (req, res) => {
+  try {
+    const  {url}  = req.body;
+
+    // Validate input
+    if (!url) {
+      return res.status(400).json({ error: 'Please provide a URL' });
+    }
+
+    const namafile = url.replace(/[^a-zA-Z0-9]/g, '');
+
+    // Generate QR code buffer
+    const qrCodeBuffer = await qr.toBuffer(url, {
+      errorCorrectionLevel: 'H',
+      color: {
+        dark: '#00008B',
+        light: '#ffffff',
+      },
+      width: 300,  // Set specific width
+      margin: 0,
+    });
+
+    // Process QR code image with sharp
+    let finalImage = sharp(qrCodeBuffer);
+
+    // Load and resize logo images
+    const logoBuffer = await sharp(path.join(__dirname, 'blank.jpg'))
+      .resize(60, 60)
+      .toBuffer();
+
+    const polbanBuffer = await sharp(path.join(__dirname, 'polban.png'))
+      .resize(50, 50)
+      .toBuffer();
+    
+    const logoBuffer1 = await sharp(path.join(__dirname, 'jtk.png'))
+      .resize(50,50)
+      .toBuffer();
+
+    const bglogo1 = await sharp(path.join(__dirname, 'blank.jpg'))
+    .resize(60,60)
+    .toBuffer();
+
+    // Composite both images onto the QR code in the center
+    finalImage = finalImage.composite([
+      { input: logoBuffer, gravity: 'center' },
+      { input: polbanBuffer, gravity: 'center' },
+      { input: bglogo1, gravity: 'southeast' },
+      { input: logoBuffer1, gravity: 'southeast' },
+        ]);
+
+    // Output as PNG buffer
+    const outputBuffer = await finalImage.png().toBuffer();
+
+    // Define the save directory and save the file
+    const tesDir = path.join(__dirname, 'src', 'img');
+    const filePath = path.join(tesDir, `${namafile}.png`);
+    await fs.mkdir(tesDir, { recursive: true });
+    await fs.writeFile(filePath, outputBuffer);
+
+    // Send response with the QR code as a data URI
+    const base64Image = outputBuffer.toString('base64');
+    const mimeType = 'image/png';
+    res.send(`<img src="data:${mimeType};base64,${base64Image}" />`);
+
+    console.log(`QR code saved to ${filePath}`);
+  } catch (error) {
+    console.error('Error generating QR code:', error);
+    res.status(500).json({ error: 'Failed to generate QR code' });
+  }
+};
+
+const tes = async (req, res) => {
+  try {
+    const filename = req.params.filename;
+    
+    // Basic security: prevent directory traversal
+    const sanitizedFilename = path.basename(filename);
+    const filePath = path.join(__dirname, 'src', 'img', sanitizedFilename);
+
+    // Check if file exists
+    await fs.access(filePath, fs.constants.F_OK);
+
+    // Optional: Check if it's an image
+    const mimeType = path.extname(filePath).toLowerCase();
+    const allowedTypes = ['.jpg', '.jpeg', '.png'];
+    if (!allowedTypes.includes(mimeType)) {
+      return res.status(400).send('Invalid file type');
+    }
+
+    res.sendFile(filePath);
+
+  } catch (error) {
+    if (error.code === 'ENOENT') {
+      return res.status(404).send('Image not found');
+    }
+    console.error('Error serving image:', error);
+    res.status(500).send('Error serving image');
+  }
+};
+
+
 export default{
     generateQRCode,
     qrmain,
     saveQR,
     pickQR,
-    deleteQR
+    deleteQR,
+    generateQRext,
+    tes
 };
