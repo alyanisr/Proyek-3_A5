@@ -1,5 +1,4 @@
 import Shortlink from "../models/shortlinkModel.js";
-import SlHistory from "../models/shotlinkHistoryModel.js";
 import cryptoRandomString from "crypto-random-string";
 import { __dirname } from "../../path.js";
 import path from "path";
@@ -20,7 +19,7 @@ const createSl = async (req, res) => {
       } else {
         custom = body.custom;
       }
-      await Shortlink.insert(id, body.destination, custom, req.session.email);
+      await Shortlink.insert(id, body.destination, custom, req.session.email, 'shortlink');
       res.status(303).redirect(`http://localhost:8000/shortlink/res?id=${id}`);
     }
   } catch (err) {
@@ -45,11 +44,6 @@ const updateSl = async (req, res) => {
     }
 
     if (isCustomUnique(result.rows[0]["short_url"])) {
-      await SlHistory.insert(
-        result.rows[0]["id_shortlink"],
-        result.rows[0]["short_url"]
-      );
-      // await pool.query(`INSERT INTO shortlink_history VALUES ($1, $2, now()::timestamp)`, [result.rows[0]['id_shortlink'], result.rows[0]['short_url']]);
       await Shortlink.update(
         "short_url",
         body.new_url,
@@ -80,11 +74,6 @@ const deleteSl = async (req, res) => {
       res.status(401).send("Unathorized");
       return;
     }
-    await SlHistory.insertDeleted(
-      result.rows[0]["id_shortlink"],
-      result.rows[0]["short_url"]
-    );
-    // await pool.query(`INSERT INTO shortlink_history VALUES ($1, $2, now()::timestamp, 'deleted')`, [result.rows[0]['id_shortlink'], result.rows[0]['short_url']]);
     await Shortlink.delete("short_url", body.short_url);
     // await pool.query(`DELETE FROM shortlinks WHERE short_url = $1`, [body.short_url]);
     res.status(200).send("deleted successfully");
@@ -220,19 +209,20 @@ const getShortlinksPaginated = async (req, res) => {
   }
 };
 
-export const shorten = async (url, email, custom = null) => {
+export const shorten = async (url, email, custom = null, method) => {
   if (custom === null) {
     const id = await uniqueRandomID();
     custom = id;
-    await Shortlink.insert(id, url, custom, email);
+    await Shortlink.insert(id, url, custom, email, method);
     return id;
   }
 
   if (await isCustomUnique(custom)) {
     const id = await uniqueRandomID();
-    await Shortlink.insert(id, url, custom, email);
+    await Shortlink.insert(id, url, custom, email, method);
     return id;
   } else {
+    console.log("custom url already exists");
     return null;
   }
 };

@@ -13,7 +13,7 @@ Linktree.getBy = async (field, value) => {
 }
 
 Linktree.insert = async (id, title, url, email, style) => {
-    return await pool.query(`INSERT INTO linktrees(id_linktree, linktree_title, linktree_url, time_linktree_created, email, style) VALUES ($1, $2, $3, now()::timestamp, $4, $5)` ,[id,title,url,email,style]);
+    return await pool.query(`INSERT INTO linktrees(id_linktree, linktree_title, linktree_url, time_linktree_created, email, style, time_linktree_last_updated) VALUES ($1, $2, $3, now()::timestamp, $4, $5, now()::timestamp)` ,[id,title,url,email,style]);
 }
 
 Linktree.patch = async (title, bio, style, id) => {

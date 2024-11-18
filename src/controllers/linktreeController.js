@@ -4,7 +4,6 @@ import cryptoRandomString from "crypto-random-string";
 import { __dirname } from "../../path.js";
 import path from "path";
 import { shorten } from "./shortlinkController.js";
-import LtHistory from "../models/linktreeHistoryModel.js";
 import Shortlink from "../models/shortlinkModel.js";
 
 async function isIDunique(id) {
@@ -66,7 +65,7 @@ const createRoom = async (req, res) => {
             custom = id;
         }
 
-        const shortUrl = await shorten(`http://localhost:8000/linktree/room?id=${id}`, req.session.email, custom);
+        const shortUrl = await shorten(`http://localhost:8000/linktree/room?id=${id}`, req.session.email, custom, 'linktree');
         await Linktree.insert(id,body.title, custom, req.session.email, null);
         res.status(303).redirect(`http://localhost:8000/linktree/room-edit?id=${id}`);
     }
@@ -83,7 +82,6 @@ const saveContent = async (req, res) => {
         const buttonData = await Button.getBy("id_linktree", id);
         if (buttonData.rowCount > 0){
             const linktreeData = await Linktree.getBy("id_linktree", id);
-            await LtHistory.insert(id, linktreeData.rows[0]["time_linktree_created"], linktreeData.rows[0]["style"], JSON.stringify(buttonData.rows), linktreeData.rows[0]["linktree_title"], linktreeData.rows[0]["bio"]);  
             await Button.delete("id_linktree",id);
             Linktree.update("time_linktree_created", "now()::timestamp", "id_linktree", id);
         }
@@ -99,7 +97,7 @@ const saveContent = async (req, res) => {
 
 async function insertButtons(id, buttonData, email = null) {
   buttonData.forEach(async (button, index) => {
-    let slID = await shorten(button.url, email);
+    let slID = await shorten(button.url, email, null, 'linktree');
     if (slID === null) {
       throw new Error("Shortlink error");
     }
