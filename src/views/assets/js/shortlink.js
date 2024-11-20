@@ -135,6 +135,8 @@ function generateQRCodeFromUrl(url) {
   );
 }
 
+let currentShortlink = "";
+
 // Fungsi untuk render data shortlink history ke HTML
 async function renderShortlinkHistory() {
   try {
@@ -162,10 +164,10 @@ async function renderShortlinkHistory() {
           <p><i data-feather="calendar"></i> ${item.time_shortlink_created}</p>
         </div>
         <div class="actions">
-          <button><i data-feather="copy"></i> Copy</button>
-          <button><i data-feather="share-2"></i> Share</button>
+          <button onclick="copyShortlink('${item.short_url}')"><i data-feather="copy"></i> Copy</button>
+          <button onclick="shareShortlink('${item.short_url}')"><i data-feather="share-2"></i> Share</button>
           <button><i data-feather="edit"></i> Edit</button>
-          <button><i data-feather="trash-2"></i> Delete</button>
+          <button onclick="deleteShortlink('${item.short_url}')"><i data-feather="trash-2"></i> Delete</button>
         </div>
       `;
     
@@ -180,36 +182,27 @@ async function renderShortlinkHistory() {
 
 document.addEventListener("DOMContentLoaded", renderShortlinkHistory());
 
-function copyShortlink() {
-  if (currentShortlink) {
-    // Menggunakan Clipboard API untuk menyalin shortlink ke clipboard
-    navigator.clipboard
-      .writeText(currentShortlink)
-      .then(() => alert("Shortlink copied to clipboard!"))
-      .catch(() => alert("Failed to copy Shortlink"));
-  } else {
-    alert("No shortlink available to copy.");
-  }
+// Fungsi untuk menyalin shortlink
+function copyShortlink(shortlink) {
+  const baseURL = window.location.origin;
+  const fullURL = `${baseURL}/${shortlink}`;
+
+  navigator.clipboard.writeText(fullURL)
+    .then(() => alert("Shortlink copied to clipboard!"))
+    .catch(() => alert("Failed to copy shortlink"));
 }
 
-function shareShortlink() {
-  if (!currentShortlink) {
-    alert("No shortlink available to share.");
-    return;
-  }
-
-  // Cek apakah Web Share API tersedia di browser
+// Fungsi untuk membagikan shortlink
+function shareShortlink(shortlink) {
   if (navigator.share) {
-    navigator
-      .share({
-        title: "Check out this link!",
-        text: "Here's a shortlink you might find interesting:",
-        url: currentShortlink,
-      })
+    navigator.share({
+      title: "Check out this link!",
+      text: "Here's a shortlink you might find interesting:",
+      url: shortlink,
+    })
       .then(() => console.log("Shortlink shared successfully"))
       .catch((error) => console.error("Failed to share shortlink:", error));
   } else {
-    // Jika Web Share API tidak tersedia, gunakan cara alternatif
     alert("Web Share API not supported. Try copying the link instead.");
   }
 }
@@ -219,12 +212,35 @@ function setShortlink(shortlink) {
   currentShortlink = shortlink; // Set currentShortlink saat shortlink baru dibuat
 }
 
-function deleteShortlink(button) {
-  const historyItem = button.closest(".history-item");
-  if (confirm("Are you sure you want to delete this link?")) {
-    historyItem.remove();
+async function deleteShortlink(email, shortlink) {
+  try {
+    const response = await fetch('/config', {  // Ganti endpoint menjadi '/config'
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        short_url: shortlink,
+        email: email,
+      }),
+    });
+
+    if (response.ok) {
+      alert("Shortlink deleted successfully!");
+      document.querySelector(`div.history-item[data-short-url="${short_url}"]`).remove();
+    } else if (response.status === 404) {
+      alert("Shortlink not found");
+    } else if (response.status === 401) {
+      alert("Unauthorized: Cannot delete this shortlink");
+    } else {
+      throw new Error("Failed to delete shortlink");
+    }
+  } catch (error) {
+    console.error("Error deleting shortlink:", error);
+    alert("Error deleting shortlink");
   }
 }
+
 
 // Get modal elements
 const modal = document.getElementById("editModal");

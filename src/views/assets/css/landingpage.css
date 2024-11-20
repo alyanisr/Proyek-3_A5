@@ -285,7 +285,43 @@ body {
 .about h2 {
   text-align: center;
   font-size: 2.6rem;
+  margin-bottom: 0.5rem;
+}
+
+.about h3 {
+  text-align: center;
+  font-size: 2.2rem;
+  margin-bottom: 1rem;
+  color: #009dff;
+}
+
+.about p {
+  text-align: center;
+  color: #828282;
   margin-bottom: 3rem;
+}
+
+.about .features .cards {
+  display: flex;
+  gap: 1em;
+  justify-content: center;
+}
+
+.about .features .card {
+  background-color: #2600ff;
+  color: #fff;
+  padding: 1em;
+  width: 20%;
+  border-radius: 5px;
+}
+
+.about .features .card h3 {
+  text-align: center;
+  color:#ffffff
+}
+
+.about .features .card p {
+  color: #fff;
 }
 
 .about .row {
@@ -306,7 +342,7 @@ body {
 }
 
 .about .row .content h3 {
-  font-size: 1.8rem;
+  font-size: 1.4rem;
   margin-bottom: 1rem;
 }
 
