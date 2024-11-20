@@ -12,6 +12,8 @@ routerLinktree.route("/room-edit").get(linktreeController.linktreeRoomEdit);
 
 routerLinktree.route("/get/:id").get(linktreeController.getLinktree);
 
-routerLinktree.route("/save").patch(linktreeController.saveContent)
+routerLinktree.route("/save").patch(linktreeController.saveContent);
+
+routerLinktree.route("/delete/:id").delete(linktreeController.deleteLinktree);
 
 export default routerLinktree;
