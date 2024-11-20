@@ -17,7 +17,7 @@ Linktree.insert = async (id, title, url, email, style) => {
 }
 
 Linktree.patch = async (title, bio, style, id) => {
-    return await pool.query(`UPDATE linktrees SET linktree_title = $1, bio = $2, style = $3 WHERE id_linktree = $4`, [title, bio, style, id]);
+    return await pool.query(`UPDATE linktrees SET linktree_title = $1, bio = $2, style = $3, time_linktree_last_updated = now()::timestamp WHERE id_linktree = $4`, [title, bio, style, id]);
 }
 
 Linktree.update = async (field, value, fieldCriteria, valueCriteria) => {

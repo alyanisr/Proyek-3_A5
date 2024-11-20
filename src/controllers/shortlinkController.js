@@ -70,7 +70,7 @@ const deleteSl = async (req, res) => {
       return;
     }
 
-    if (result.rows[0]["email"] != body.email) {
+    if (result.rows[0]["email"] != req.session.email) {
       res.status(401).send("Unathorized");
       return;
     }

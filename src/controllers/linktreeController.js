@@ -78,15 +78,14 @@ const createRoom = async (req, res) => {
 const saveContent = async (req, res) => {
     try{
         const { body } = req;
-        const id = req.query.id; 
-        const buttonData = await Button.getBy("id_linktree", id);
-        if (buttonData.rowCount > 0){
-            const linktreeData = await Linktree.getBy("id_linktree", id);
-            await Button.delete("id_linktree",id);
-            Linktree.update("time_linktree_created", "now()::timestamp", "id_linktree", id);
-        }
+        const id = req.query.id;
+        // const result = await Linktree.getBy("id_linktree", id);
+        // if (result.rows[0]["email"] != req.session.email) {
+        //   res.status(401).send("Unathorized");
+        //   return;
+        // }
         await Linktree.patch(body.title, body.bio, body.style, id);
-        await insertButtons(id, body.btnArray);
+        await insertButtons(id, body.btnArray, 'muhammad.reivan.tif23@polban.ac.id');
         res.status(200).send("success");
     }
     catch (e){
@@ -94,6 +93,24 @@ const saveContent = async (req, res) => {
         res.status(500).send(e.message);
     }
 }
+
+const deleteLinktree = async (req, res) => {
+  try {
+    // const result = await Linktree.getBy("id_linktree", req.params.id);
+    // if (result.rowCount === 0) {
+    //   res.status(404).send("Not-found");
+    //   return;
+    // } else if (result.rows[0]["email"] != req.session.email) {
+    //   res.status(401).send("Unathorized");
+    //   return;
+    // }
+    await Linktree.delete("id_linktree", req.params.id);
+    res.status(200).send("success");
+  } catch (e) {
+    console.log(e.message);
+    res.status(500).send(e.message);
+  }
+};
 
 async function insertButtons(id, buttonData, email = null) {
   buttonData.forEach(async (button, index) => {
@@ -162,5 +179,6 @@ export default {
     getLinktree,
     saveContent,
     linktreeRoom,
-    linktreeRoomEdit
+    linktreeRoomEdit,
+    deleteLinktree
 }
