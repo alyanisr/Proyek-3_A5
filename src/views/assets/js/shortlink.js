@@ -137,6 +137,13 @@ function generateQRCodeFromUrl(url) {
 
 let currentShortlink = "";
 
+function truncateString(str, maxLength) {
+  if (str.length > maxLength) {
+    return str.substring(0, maxLength) + "...";
+  }
+  return str;
+}
+
 // Fungsi untuk render data shortlink history ke HTML
 async function renderShortlinkHistory() {
   try {
@@ -154,13 +161,14 @@ async function renderShortlinkHistory() {
     data.rows.forEach(item => {
       const historyItem = document.createElement("div");
       historyItem.className = "history-item";
+      const shortLongUrl = truncateString(item.long_url || "No url available", 50);
 
       historyItem.dataset.id = item.id;
       historyItem.innerHTML = `
         <i data-feather="link-2"></i>
         <div class="link-details">
           <p class="shortUrl">${item.short_url || 'No shorts available'} </p>
-          <p class="longUrl">${item.long_url || 'No url available'}</p>
+          <p class="longUrl">${shortLongUrl}</p>
           <p><i data-feather="calendar"></i> ${item.time_shortlink_created}</p>
         </div>
         <div class="actions">
