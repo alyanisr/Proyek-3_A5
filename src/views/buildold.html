@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Link-In-Bio</title>
+    <title>Bio Link Manager</title>
     <link
       href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css"
       rel="stylesheet"
@@ -21,58 +21,25 @@
         transform: translateY(-50%);
       }
 
-      .theme-option {
-        width: 120px;
-        height: 160px;
-        border-radius: 10px;
-        cursor: pointer;
-        transition: transform 0.2s;
-      }
-
-      .theme-option:hover {
-        transform: scale(1.05);
-      }
-
-      .color-circle {
-        width: 30px;
-        height: 30px;
-        border-radius: 50%;
-        cursor: pointer;
-        margin: 5px;
-      }
-
-      .font-option {
-        padding: 10px;
-        margin: 5px;
-        border: 1px solid #ddd;
-        border-radius: 5px;
-        cursor: pointer;
-      }
-
-      .font-option:hover {
-        background-color: #f8f9fa;
-      }
-
-      .block-shape {
-        width: 200px;
-        height: 50px;
-        margin: 10px;
-        cursor: pointer;
+      .preview-content {
+        height: 100%;
+        background: linear-gradient(to bottom, #4158d0, #c850c0);
       }
 
       .preview-link {
-        margin: 10px 0;
-        padding: 12px;
-        border-radius: 8px;
-        background: white;
-        text-decoration: none;
-        color: black;
         display: block;
-        transition: transform 0.2s;
+        background: rgba(255, 255, 255, 0.9);
+        color: #333;
+        text-decoration: none;
+        padding: 12px 20px;
+        border-radius: 8px;
+        margin-bottom: 10px;
+        transition: transform 0.2s, background 0.2s;
       }
 
       .preview-link:hover {
-        transform: scale(1.02);
+        transform: translateY(-2px);
+        background: white;
       }
 
       .sidebar {
@@ -92,6 +59,22 @@
 
       .nav-pills .nav-link.active {
         background-color: #0d6efd;
+      }
+
+      .save-changes-btn {
+        position: fixed;
+        top: 10px;
+        right: 20px;
+        padding: 10px 20px;
+        background-color: #4caf50;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 16px;
+      }
+      .save-changes-btn:hover {
+        background-color: #45a049;
       }
     </style>
   </head>
@@ -225,13 +208,7 @@
           <!-- Preview Phone -->
           <div class="col-md-4">
             <div class="preview-phone">
-              <div
-                class="preview-content p-3"
-                style="
-                  height: 100%;
-                  background: linear-gradient(to bottom, #4158d0, #c850c0);
-                "
-              >
+              <div class="preview-content p-3">
                 <div class="text-center mb-4">
                   <img
                     src="/api/placeholder/80/80"
@@ -250,12 +227,12 @@
       </div>
     </div>
 
-    <!-- Add Link Modal -->
-    <div class="modal fade" id="addLinkModal">
+    <!-- Add/Edit Link Modal -->
+    <div class="modal fade" id="linkModal">
       <div class="modal-dialog">
         <div class="modal-content">
           <div class="modal-header">
-            <h5 class="modal-title">Add New Link</h5>
+            <h5 class="modal-title" id="modalTitle">Add New Link</h5>
             <button
               type="button"
               class="btn-close"
@@ -263,24 +240,35 @@
             ></button>
           </div>
           <div class="modal-body">
-            <form id="addLinkForm">
+            <form id="linkForm">
+              <input type="hidden" id="linkIndex" />
               <div class="mb-3">
                 <label class="form-label">Title</label>
-                <input type="text" class="form-control" required />
+                <input
+                  type="text"
+                  class="form-control"
+                  id="linkTitle"
+                  required
+                />
               </div>
               <div class="mb-3">
                 <label class="form-label">Description (optional)</label>
-                <input type="text" class="form-control" />
+                <input type="text" class="form-control" id="linkDescription" />
               </div>
               <div class="mb-3">
                 <label class="form-label">Destination URL</label>
-                <input type="url" class="form-control" required />
+                <input type="url" class="form-control" id="linkUrl" required />
               </div>
               <div class="mb-3">
                 <label class="form-label">Short Link</label>
                 <div class="input-group">
-                  <span class="input-group-text">bio.sh/</span>
-                  <input type="text" class="form-control" required />
+                  <span class="input-group-text">plb.sh/</span>
+                  <input
+                    type="text"
+                    class="form-control"
+                    id="linkShort"
+                    required
+                  />
                 </div>
               </div>
             </form>
@@ -301,73 +289,15 @@
       </div>
     </div>
 
+    <button class="save-changes-btn" onclick="saveChanges()">
+      Save Changes
+    </button>
+
     <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/js/all.min.js"></script>
     <script>
-      feather.replace(); // Initialize Feather icons
-
-      function goBack() {
-        window.history.back();
-      }
-
-      // Fungsi untuk mengambil ID dari URL
-      function getIdFromUrl() {
-        const params = new URLSearchParams(window.location.search);
-        return params.get("id"); // Mengambil ID dari URL
-      }
-
-      // Fungsi untuk mengambil data shortlink dari backend
-      async function fetchShortlink() {
-        const id = getIdFromUrl();
-        if (!id) {
-          console.error("No ID found in URL"); // Menampilkan pesan jika ID tidak ditemukan
-          return;
-        }
-
-        try {
-          const response = await fetch(
-            `http://localhost:8000/linktree/get/${id}`
-          );
-          if (!response.ok) {
-            throw new Error("Network response was not ok"); // Menampilkan pesan jika terjadi kesalahan jaringan
-          }
-          const data = await response.json(); // Mengambil data JSON dari response
-          console.log("ok", data);
-          document.getElementById("shortlink-title").textContent =
-            "http://localhost:8000/" + data.short_url; // Menampilkan judul (custom URL)
-          document.getElementById("shortlink-url").textContent = data.long_url; // Menampilkan URL tujuan
-          // Generate QR code if enabled
-          if (document.getElementById("enable-qr").checked) {
-            generateQRCode(data.destination);
-          }
-        } catch (error) {
-          console.error("Error fetching shortlink:", error);
-        }
-      }
-
-      // Generate QR code based on the URL
-      function generateQRCode(url) {
-        const canvas = document.getElementById("qr-code-canvas");
-        const ctx = canvas.getContext("2d");
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        // Assuming you have a QR code generation function (e.g., qrcode.js)
-        QRCode.toCanvas(canvas, url, function (error) {
-          if (error) console.error(error);
-          console.log("QR code generated!");
-        });
-      }
-
-      // Ambil data shortlink saat halaman dimuat
-      window.onload = fetchShortlink; // Memanggil fungsi fetchShortlink saat halaman dimuat
-    </script>
-    <script>
-      // Initialize tooltips
-      var tooltipTriggerList = [].slice.call(
-        document.querySelectorAll('[data-bs-toggle="tooltip"]')
-      );
-      var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
-        return new bootstrap.Tooltip(tooltipTriggerEl);
-      });
+      let linkModal = new bootstrap.Modal(document.getElementById("linkModal"));
+      let links = [];
 
       // Show/Hide pages
       function showBuildPage() {
@@ -394,29 +324,61 @@
 
       // Add Link Modal
       function showAddLinkModal() {
-        new bootstrap.Modal(document.getElementById("addLinkModal")).show();
+        document.getElementById("modalTitle").textContent = "Add New Link";
+        document.getElementById("linkForm").reset();
+        document.getElementById("linkIndex").value = "";
+        linkModal.show();
       }
 
       // Save Link
       function saveLink() {
-        const form = document.getElementById("addLinkForm");
+        const form = document.getElementById("linkForm");
         if (form.checkValidity()) {
-          // Add link to list and preview
-          const linksList = document.getElementById("linksList");
-          const previewLinks = document.getElementById("previewLinks");
+          const linkData = {
+            title: document.getElementById("linkTitle").value,
+            description: document.getElementById("linkDescription").value,
+            url: document.getElementById("linkUrl").value,
+            short: document.getElementById("linkShort").value,
+          };
 
+          const index = document.getElementById("linkIndex").value;
+          if (index === "") {
+            // Add new link
+            links.push(linkData);
+          } else {
+            // Update existing link
+            links[index] = linkData;
+          }
+
+          renderLinks();
+          linkModal.hide();
+          form.reset();
+        } else {
+          form.reportValidity();
+        }
+      }
+
+      // Render Links
+      function renderLinks() {
+        const linksList = document.getElementById("linksList");
+        const previewLinks = document.getElementById("previewLinks");
+
+        linksList.innerHTML = "";
+        previewLinks.innerHTML = "";
+
+        links.forEach((link, index) => {
           // Add to links list
           const linkItem = document.createElement("div");
           linkItem.className = "card mb-3";
           linkItem.innerHTML = `
                     <div class="card-body d-flex justify-content-between align-items-center">
                         <div>
-                            <h6 class="mb-0">${form.elements[0].value}</h6>
-                            <small class="text-muted">bio.sh/${form.elements[3].value}</small>
+                            <h6 class="mb-0">${link.title}</h6>
+                            <small class="text-muted">plb.sh/${link.short}</small>
                         </div>
                         <div>
-                            <button class="btn btn-sm btn-outline-primary me-2">Edit</button>
-                            <button class="btn btn-sm btn-outline-danger">Delete</button>
+                            <button class="btn btn-sm btn-outline-primary me-2" onclick="showEditLinkModal(${index})">Edit</button>
+                            <button class="btn btn-sm btn-outline-danger" onclick="deleteLink(${index})">Delete</button>
                         </div>
                     </div>
                 `;
@@ -424,17 +386,73 @@
 
           // Add to preview
           const previewLink = document.createElement("a");
-          previewLink.href = form.elements[2].value;
+          previewLink.href = link.url;
           previewLink.className = "preview-link";
-          previewLink.innerHTML = form.elements[0].value;
+          previewLink.innerHTML = link.title;
           previewLinks.appendChild(previewLink);
+        });
+      }
 
-          // Close modal
-          bootstrap.Modal.getInstance(
-            document.getElementById("addLinkModal")
-          ).hide();
-          form.reset();
+      // Edit Link Modal
+      function showEditLinkModal(index) {
+        const link = links[index];
+        document.getElementById("modalTitle").textContent = "Edit Link";
+        document.getElementById("linkIndex").value = index;
+        document.getElementById("linkTitle").value = link.title;
+        document.getElementById("linkDescription").value =
+          link.description || "";
+        document.getElementById("linkUrl").value = link.url;
+        document.getElementById("linkShort").value = link.short;
+        linkModal.show();
+      }
+
+      // Delete Link
+      function deleteLink(index) {
+        if (confirm("Are you sure you want to delete this link?")) {
+          links.splice(index, 1);
+          renderLinks();
         }
+      }
+
+      // Fungsi untuk menyimpan perubahan
+      function saveChanges() {
+        // Data yang akan dikirimkan
+        const data = {
+          title: document.getElementById("title").value, // Ambil dari input
+          bio: document.getElementById("bio").value, // Ambil dari textarea
+          style: {
+            font: "consolas",
+            "bg-color": "red",
+          },
+          btnArray: [
+            { name: "Button 1", url: "https://example1.com" },
+            { name: "Button 2", url: "https://example2.com" },
+            { name: "Button 3", url: "https://example3.com" },
+          ],
+        };
+
+        // Fetch API untuk mengirim data ke server
+        fetch("http://localhost:8000/linktree/save?id=[ID_LINKTREE]", {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(data),
+        })
+          .then((response) => {
+            if (!response.ok) {
+              throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+          })
+          .then((result) => {
+            alert("Changes saved successfully!");
+            console.log(result);
+          })
+          .catch((error) => {
+            console.error("Error saving changes:", error);
+            alert("Failed to save changes.");
+          });
       }
     </script>
   </body>

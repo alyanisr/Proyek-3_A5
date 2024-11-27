@@ -1,78 +1,81 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
+  <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Account Verification</title>
     <link rel="stylesheet" href="/assets/css/verifikasi.css" />
-</head>
-<body>
+  </head>
+  <body>
     <div class="container">
-        <div class="verification-box">
-            <h1>Verify Your Account</h1>
-            <p>
-                We emailed you the six-digit code to <span id="email-span">loading...</span>
-            </p>
-            <p>Enter the code below to confirm your email address</p>
-            <div class="code-inputs">
-                <input type="text" maxlength="1" />
-                <input type="text" maxlength="1" />
-                <input type="text" maxlength="1" />
-                <input type="text" maxlength="1" />
-                <input type="text" maxlength="1" />
-                <input type="text" maxlength="1" />
-            </div>
-            <button type="submit" onclick="verifyOtp()">VERIFY</button>
-            <p class="resend-text">
-                If you didn't receive a code <a href="#">RESEND</a>
-            </p>
+      <div class="verification-box">
+        <h1>Verify Your Account</h1>
+        <p>
+          We emailed you the six-digit code to
+          <span id="email-span">loading...</span>
+        </p>
+        <p>Enter the code below to confirm your email address</p>
+        <div class="code-inputs">
+          <input type="text" maxlength="1" />
+          <input type="text" maxlength="1" />
+          <input type="text" maxlength="1" />
+          <input type="text" maxlength="1" />
+          <input type="text" maxlength="1" />
+          <input type="text" maxlength="1" />
         </div>
+        <button type="submit" onclick="verifyOtp()">VERIFY</button>
+        <p class="resend-text">
+          If you didn't receive a code <a href="#">RESEND</a>
+        </p>
+      </div>
     </div>
 
     <script>
-        // Fetch email from session
-        async function getEmailFromSession() {
-            const response = await fetch('/account/get-email');
-            if (response.ok) {
-                const data = await response.json();
-                document.getElementById('email-span').innerText = data.email; // Display email on the page
-            } else {
-                console.error('Failed to fetch email:', response.statusText);
-            }
+      // Fetch email from session
+      async function getEmailFromSession() {
+        const response = await fetch("/account/get-email");
+        if (response.ok) {
+          const data = await response.json();
+          document.getElementById("email-span").innerText = data.email; // Display email on the page
+        } else {
+          console.error("Failed to fetch email:", response.statusText);
         }
+      }
 
-        // Call the function when the page loads
-        window.onload = getEmailFromSession;
+      // Call the function when the page loads
+      window.onload = getEmailFromSession;
 
-        // Function to handle OTP verification
-        async function verifyOtp() {
-    try {
-        const otpInputs = document.querySelectorAll('.code-inputs input');
-        const otp = Array.from(otpInputs).map(input => input.value).join('');
-        const email = document.getElementById('email-span').innerText;
+      // Function to handle OTP verification
+      async function verifyOtp() {
+        try {
+          const otpInputs = document.querySelectorAll(".code-inputs input");
+          const otp = Array.from(otpInputs)
+            .map((input) => input.value)
+            .join("");
+          const email = document.getElementById("email-span").innerText;
 
-        const response = await fetch('/account/verify', {
-            method: 'POST',
+          const response = await fetch("/account/verify", {
+            method: "POST",
             headers: {
-                'Content-Type': 'application/json'
+              "Content-Type": "application/json",
             },
-            body: JSON.stringify({ email, otp })
-        });
+            body: JSON.stringify({ email, otp }),
+          });
 
-        const result = await response.json();
-        
-        if (response.ok && result.success) {
-            alert('Account successfully verified!');
+          const result = await response.json();
+
+          if (response.ok && result.success) {
+            alert("Account successfully verified!");
             // Redirect menggunakan window.location
             window.location.href = result.redirectUrl;
-        } else {
-            alert(result.msg || 'Verification failed.');
+          } else {
+            alert(result.msg || "Verification failed.");
+          }
+        } catch (error) {
+          alert("An error occurred during verification.");
+          console.error(error);
         }
-    } catch (error) {
-        alert('An error occurred during verification.');
-        console.error(error);
-    }
-}
+      }
     </script>
-</body>
+  </body>
 </html>

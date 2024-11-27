@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Shortlink Dashboard</title>
+    <title>LinkTree</title>
 
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -17,8 +17,8 @@
     <script src="https://unpkg.com/feather-icons"></script>
 
     <!-- My Style -->
-    <link rel="stylesheet" href="assets/css/createlinktree.css" />
-    <script defer src="assets/js/createlinktree.js"></script>
+    <link rel="stylesheet" href="/assets/css/createlinktree.css" />
+    <script defer src="/assets/js/createlinktree.js"></script>
   </head>
 
   <body>
@@ -83,58 +83,35 @@
             <h2>Create Page</h2>
 
             <form
-              action="http://localhost:8000/linktree/config"
+              action="http://localhost:8000/linktree/create-room"
               method="POST"
-              id="short-url-form"
+              id="linktree-form"
             >
               <div class="input-group">
-                <label for="title-input">Add Your Link</label>
+                <label for="title-input">Title</label>
                 <input
                   type="text"
                   id="title-input"
                   name="title"
-                  placeholder="your page name..."
+                  placeholder="Enter a title for your LinkTree..."
                   required
                 />
               </div>
-              <button class="save-btn" id="add-link-btn" type="submit">
-                Add Link
-              </button>
-            </form>
-
-            <div class="container">
-              <div class="main-container">
-                <!-- Create Page Container -->
-                <!-- Select Template Container -->
-                <div class="select-template-container">
-                  <div class="select-template">
-                    <h3>Select a template</h3>
-                    <div class="template-grid">
-                      <div class="template-card">Template 1</div>
-                      <div class="template-card">Template 2</div>
-                      <div class="template-card">Template 3</div>
-                      <div class="template-card">Template 4</div>
-                      <div class="template-card">Template 5</div>
-                    </div>
-                    <button class="choose-template">
-                      Choose this template
-                    </button>
-                    <a href="#" class="blank-page">Start with a blank page</a>
-                  </div>
+              <div class="input-group">
+                <label for="url-input">Custom URL</label>
+                <div class="custom-url-container">
+                  <span class="url-prefix">plb.sh/</span>
+                  <input
+                    type="text"
+                    id="url-input"
+                    name="customUrl"
+                    placeholder="Enter custom URL..."
+                    required
+                  />
                 </div>
               </div>
-            </div>
-
-            <!-- <div class="preview" id="qr-preview" style="display: none">
-              <canvas id="qr-canvas" width="300" height="300"></canvas>
-              <div class="qr-buttons">
-                <ul id="cart-list"></ul>
-                <button class="save-btn" id="copy-btn">Copy QR Code</button>
-                <button class="save-btn" id="download-btn">
-                  Download QR Code
-                </button>
-              </div>
-            </div> -->
+              <button type="submit" class="save-btn">Create Room</button>
+            </form>
           </div>
         </div>
 
@@ -175,44 +152,47 @@
     <script src="assets/js/createlinktree.js"></script>
     <script>
       feather.replace(); // Initialize Feather icons
-    </script>
-    <script>
-      document
 
-        .getElementById("short-url-form")
-        .addEventListener("submit", function (e) {
-          e.preventDefault();
+      // Event listener for form submission
+      document.addEventListener("DOMContentLoaded", () => {
+        const form = document.getElementById("linktree-form");
 
+        form.addEventListener("submit", async (event) => {
+          event.preventDefault(); // Prevent form from submitting the default way
+          console.log("Form submitted, preventing default...");
+
+          // Ambil data dari form
           const title = document.getElementById("title-input").value;
-          const url = document.getElementById("url-input").value;
-          const customUrl = document.getElementById("custom-url-input").value;
+          const customUrl = document.getElementById("url-input").value;
 
-          const data = {
-            destination: url,
-            custom: customUrl,
-          };
-
-          fetch("http://localhost:8000/linktree/config", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify(data),
-          })
-            .then((response) => {
-              if (response.redirected) {
-                window.location.href = response.url;
-              } else {
-                return response.json();
+          try {
+            // Kirim request POST ke backend untuk membuat room
+            const response = await fetch(
+              "http://localhost:8000/linktree/create-room",
+              {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json", // Menentukan tipe konten
+                },
+                body: JSON.stringify({ title, customUrl }), // Mengirim data sebagai JSON
               }
-            })
-            .then((data) => {
-              console.log("Success:", data);
-            })
-            .catch((error) => {
-              console.error("Error:", error);
-            });
+            );
+
+            if (response.ok) {
+              // Redirect langsung berdasarkan lokasi yang dikirim oleh server
+              window.location.href = response.url;
+            } else if (response.status === 400) {
+              // Jika custom URL sudah ada, tampilkan pesan error
+              alert("Custom URL already exists! Please choose another.");
+            } else {
+              alert("An error occurred. Please try again.");
+            }
+          } catch (error) {
+            console.error("Error submitting form:", error);
+            alert("Failed to create the room. Check your connection.");
+          }
         });
+      });
     </script>
   </body>
 </html>
