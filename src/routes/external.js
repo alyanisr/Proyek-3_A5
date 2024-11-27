@@ -6,7 +6,7 @@ const routerext = express.Router()
 routerext.route('/send')
     .get(QrController.generateQRext)
 
-routerext.route('/tes/:filename')
-    .get(QrController.tes);
+routerext.route('/:filename')
+    .get(QrController.getqrext);
 
 export default routerext;
