@@ -34,9 +34,9 @@ Shortlink.exists = async (field, value) => {
 Shortlink.getByEmailPaginated = async (email) => {
     return await pool.query(
         `SELECT id_shortlink, short_url, long_url, TO_CHAR(time_shortlink_created, 'DD-MM-YYYY') AS time_shortlink_created
-         FROM shortlinks 
+         FROM shortlinks s
          WHERE email = $1 and create_method = 'shortlink'
-         ORDER BY time_shortlink_created DESC `,
+         ORDER BY s.time_shortlink_created DESC`,
         [email]
     );
 };

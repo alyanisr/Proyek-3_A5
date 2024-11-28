@@ -35,8 +35,8 @@ const linktreeMenu = async (req, res) => {
 
 const sendLinktreeData = async (req, res) => {
   try {
-    const linktreeData = await Linktree.getBy("id", req.params.id);
-    const buttonData = await Button.getBy("linktree_id", req.params.id);
+    const linktreeData = await Linktree.getBy("id_linktree", req.params.id);
+    const buttonData = await Button.getBy("id_linktree", req.params.id);
     res.status(200).send({
       linktreeData: linktreeData.rows,
       buttonData: buttonData.rows,
@@ -81,7 +81,7 @@ const saveContent = async (req, res) => {
         const id = req.query.id;
         // const result = await Linktree.getBy("id_linktree", id);
         // if (result.rows[0]["email"] != req.session.email) {
-        //   res.status(401).send("Unathorized");
+        //   res.status(403).send("Forbidden");
         //   return;
         // }
         await Linktree.patch(body.title, body.bio, body.style, id);
@@ -101,7 +101,7 @@ const deleteLinktree = async (req, res) => {
     //   res.status(404).send("Not-found");
     //   return;
     // } else if (result.rows[0]["email"] != req.session.email) {
-    //   res.status(401).send("Unathorized");
+    //   res.status(403).send("Forbidden");
     //   return;
     // }
     await Linktree.delete("id_linktree", req.params.id);
@@ -130,7 +130,7 @@ const getLinktree = async (req, res) => {
       res.status(404).send("Not-found");
       return;
     } else if (result.rows[0]["email"] != req.session.email) {
-      res.status(401).send("Unathorized");
+      res.status(403).send("Forbidden");
       return;
     } 
 

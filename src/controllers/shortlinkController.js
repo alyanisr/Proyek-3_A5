@@ -23,7 +23,7 @@ const createSl = async (req, res) => {
       res.status(303).redirect(`http://localhost:8000/shortlink/res?id=${id}`);
     }
   } catch (err) {
-    res.status(500).send(err.message);
+    res.status(500).send({error: err.message});
   }
 };
 
@@ -39,7 +39,7 @@ const updateSl = async (req, res) => {
     }
 
     if (result.rows[0]["email"] != req.session.email) {
-      res.status(401).send("Unathorized");
+      res.status(403).send("Forbidden");
       return;
     }
 
@@ -71,7 +71,7 @@ const deleteSl = async (req, res) => {
     }
 
     if (result.rows[0]["email"] != req.session.email) {
-      res.status(401).send("Unathorized");
+      res.status(403).send("Forbidden");
       return;
     }
     await Shortlink.delete("short_url", body.short_url);
@@ -100,7 +100,7 @@ const getByID = async (req, res) => {
       res.status(404).send("Not-found");
       return;
     } else if (result.rows[0]["email"] != req.session.email) {
-      res.status(401).send("Unathorized");
+      res.status(403).send("Forbidden");
       return;
     } else {
       res.status(200).send({
