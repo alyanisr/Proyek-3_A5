@@ -3,8 +3,8 @@ import format from 'pg-format';
 
 const Qr = {}
 
-Qr.insert = async(id,date,email,style) => {
-    return await pool.query(`INSERT INTO qr_codes(id_qr, time_qr_created, email, style) VALUES ($1, $2, $3, $4)`, [id,date,email,style]);
+Qr.insert = async(id,date,email,style,url,title,id_shortlink) => {
+    return await pool.query(`INSERT INTO qr_codes(id_qr, latest_update, email, style,url,title,id_shortlink) VALUES ($1, $2, $3, $4,$5,$6,$7)`, [id,date,email,style,url,title,id_shortlink]);
 } 
 Qr.show = async(id) => {
     return await pool.query(`SELECT style FROM qr_codes WHERE id_qr = $1`, [id]);

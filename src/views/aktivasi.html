@@ -53,7 +53,9 @@
               required
               placeholder=" "
             />
-            <label for="confirm_password" class="sign-label">Konfirmasi Password</label>
+            <label for="confirm_password" class="sign-label"
+              >Konfirmasi Password</label
+            >
             <span id="toggle-confirm-password" class="sign-show-password">
               <i data-feather="eye" class="toggle-icon"></i>
             </span>
@@ -62,7 +64,7 @@
           <button type="submit" class="sign-button">Aktivasi</button>
         </form>
         <div class="sign-account-text">
-          <p>Sudah punya akun? <a href="newlogin.html">Masuk</a></p>
+          <p>Sudah punya akun? <a href="login.html">Masuk</a></p>
         </div>
       </div>
     </div>
@@ -84,8 +86,11 @@
           passwordInput.setAttribute("type", type);
 
           // Toggle icon based on the password visibility
-          const icon = toggleElement.querySelector('i');
-          icon.setAttribute("data-feather", type === "password" ? "eye" : "eye-off");
+          const icon = toggleElement.querySelector("i");
+          icon.setAttribute(
+            "data-feather",
+            type === "password" ? "eye" : "eye-off"
+          );
 
           // Re-initialize Feather icons to render the updated icon
           feather.replace();
@@ -110,68 +115,75 @@
       });
 
       // Handle form submission using fetch to send JSON
-      document.getElementById("aktivasiForm").addEventListener("submit", function (event) {
-        event.preventDefault(); // Stop the form from submitting the traditional way
+      document
+        .getElementById("aktivasiForm")
+        .addEventListener("submit", function (event) {
+          event.preventDefault(); // Stop the form from submitting the traditional way
 
-        const email = document.getElementById("email").value;
-        const password = document.getElementById("password").value;
-        const confirmPassword = document.getElementById("confirm_password").value;
+          const email = document.getElementById("email").value;
+          const password = document.getElementById("password").value;
+          const confirmPassword =
+            document.getElementById("confirm_password").value;
 
-        // Validate email domain
-        const emailDomain = "@polban.ac.id";
-        if (!email.endsWith(emailDomain)) {
-          alert(`Hanya email dengan domain ${emailDomain} yang bisa digunakan.`);
-          return;
-        }
+          // Validate email domain
+          const emailDomain = "@polban.ac.id";
+          if (!email.endsWith(emailDomain)) {
+            alert(
+              `Hanya email dengan domain ${emailDomain} yang bisa digunakan.`
+            );
+            return;
+          }
 
-        // Validate password pattern
-        const passwordPattern =
-          /^(?=.*[A-Z])(?=.*\d)(?=.*[\W_])[A-Za-z\d\W_]{8,}$/;
+          // Validate password pattern
+          const passwordPattern =
+            /^(?=.*[A-Z])(?=.*\d)(?=.*[\W_])[A-Za-z\d\W_]{8,}$/;
 
-        if (!passwordPattern.test(password)) {
-          alert(
-            "Password harus terdiri dari minimal 8 karakter, termasuk minimal 1 huruf besar, 1 angka, dan 1 simbol."
-          );
-          return;
-        }
+          if (!passwordPattern.test(password)) {
+            alert(
+              "Password harus terdiri dari minimal 8 karakter, termasuk minimal 1 huruf besar, 1 angka, dan 1 simbol."
+            );
+            return;
+          }
 
-        // Validate password match
-        if (password !== confirmPassword) {
-          alert("Password dan konfirmasi password tidak cocok. Silakan periksa kembali.");
-          return;
-        }
+          // Validate password match
+          if (password !== confirmPassword) {
+            alert(
+              "Password dan konfirmasi password tidak cocok. Silakan periksa kembali."
+            );
+            return;
+          }
 
-        // Prepare data to send as JSON
-        const data = {
-          email: email,
-          password: password
-        };
+          // Prepare data to send as JSON
+          const data = {
+            email: email,
+            password: password,
+          };
 
-        // Send data to backend as JSON
-        fetch('/account/send', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(data), // Convert data to JSON string
-        })
-          .then(response => {
-            if (response.redirected) {
-              // If the response is redirected, follow the redirect
-              window.location.href = response.url;
-            } else {
-              return response.json(); // Process the JSON response
-            }
+          // Send data to backend as JSON
+          fetch("/account/send", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(data), // Convert data to JSON string
           })
-          .then(data => {
-            // Handle success if not redirected
-            console.log('Success:', data);
-          })
-          .catch((error) => {
-            console.error('Error:', error);
-            alert("Terjadi kesalahan saat mengirim data.");
-          });
-      });
+            .then((response) => {
+              if (response.redirected) {
+                // If the response is redirected, follow the redirect
+                window.location.href = response.url;
+              } else {
+                return response.json(); // Process the JSON response
+              }
+            })
+            .then((data) => {
+              // Handle success if not redirected
+              console.log("Success:", data);
+            })
+            .catch((error) => {
+              console.error("Error:", error);
+              alert("Terjadi kesalahan saat mengirim data.");
+            });
+        });
     </script>
   </body>
 </html>

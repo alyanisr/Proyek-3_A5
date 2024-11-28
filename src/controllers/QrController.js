@@ -5,23 +5,25 @@ import { __dirname } from '../../path.js';
 import Qr from '../models/qrModel.js';
 import cryptoRandomString from 'crypto-random-string';
 import fs from 'fs/promises';
+import { shorten } from './shortlinkController.js';
 
 const generateQRCode = async (req, res) => {
   try {
     const { url, title, color } = req.body;
     const logo = req.file;
-
     if (!url || !title) {
       return res.status(400).json({ error: 'Please provide both URL and title' });
     }
-
+    
     // Generate QR code
     const qrCodeBuffer = await qr.toBuffer(url, {
       errorCorrectionLevel: 'H',
       color: {
         dark: color || '#000000',
         light: '#ffffff'
-      }
+      },
+      width: 300,  // Set specific width
+      margin: 0,
     });
 
     let finalImage = sharp(qrCodeBuffer).resize(300, 300);
@@ -71,11 +73,13 @@ const saveQR = async (req, res) => {
   try {
     const id_qr = await uniqueRandomIDqr(); 
     const email = req.session.email; 
-    const { date} = req.body;
     const { body } = req;
-    
+    const {url,title,date} = req.body;
+    const custom = null;
+    const id_sl = await shorten(url,email,custom,'qr')
+
     // Save binary imageBuffer
-    await Qr.insert(id_qr, date, email, body);
+    await Qr.insert(id_qr, date, email, body,url,title,id_sl);
     res.status(200).json({ message: 'QR code saved successfully' });
   } catch (error) {
     console.log(error.message)
@@ -155,51 +159,64 @@ async function isIDuniqueqr(id) {
 const deleteQR = async (req, res) => {
   try {
     const { id } = req.params;
-    
-    // Check if id exists
+    const email = req.session.email; // Retrieve email from session
+
+    // Check if id and email exist
     if (!id) {
       console.log('ID parameter is missing');
       return res.status(400).json({
         success: false,
-        error: 'ID parameter is required'
+        error: 'ID parameter is required',
       });
     }
 
-    // Log untuk debugging
+    if (!email) {
+      console.log('User is not authenticated');
+      return res.status(401).json({
+        success: false,
+        error: 'Authentication required',
+      });
+    }
 
-    // Hapus QR code
+    // Verify ownership of the QR code
+    const ownershipCheck = await Qr.checkOwner(id, email);
+    if (!ownershipCheck.rows[0]?.exists) {
+      console.log('Unauthorized attempt to delete QR code:', { id, email });
+      return res.status(403).json({
+        success: false,
+        error: 'You do not have permission to delete this QR code',
+      });
+    }
+
+    // Delete QR code
     const result = await Qr.delete(id);
-    
-    // Log hasil query
 
-
-    // Cek apakah data berhasil dihapus
     if (result.rowCount === 0) {
+      console.log('QR code not found during deletion:', id);
       return res.status(404).json({
         success: false,
-        error: 'QR code not found'
+        error: 'QR code not found',
       });
     }
 
     res.status(200).json({
       success: true,
-      message: 'QR code deleted successfully'
+      message: 'QR code deleted successfully',
     });
-
   } catch (error) {
-    // Log error lengkap untuk debugging
     console.error('Detailed error deleting QR code:', {
       message: error.message,
-      stack: error.stack
+      stack: error.stack,
     });
-    
+
     res.status(500).json({
       success: false,
       error: 'Failed to delete QR code',
-      details: error.message // tambahkan detail error untuk debugging
+      details: error.message,
     });
   }
 };
+
 
 const generateQRext = async (req, res) => {
   try {
@@ -263,7 +280,7 @@ const generateQRext = async (req, res) => {
     // Send response with the QR code as a data URI
     const base64Image = outputBuffer.toString('base64');
     const mimeType = 'image/png';
-    res.send(`<img src="data:${mimeType};base64,${base64Image}" />`);
+    res.json({ message: 'QR code generated successfully', url: `http://localhost:8000/tes/${namafile}.png` });
 
     console.log(`QR code saved to ${filePath}`);
   } catch (error) {
@@ -272,7 +289,7 @@ const generateQRext = async (req, res) => {
   }
 };
 
-const tes = async (req, res) => {
+const getqrext = async (req, res) => {
   try {
     const filename = req.params.filename;
     
@@ -309,5 +326,5 @@ export default{
     pickQR,
     deleteQR,
     generateQRext,
-    tes
+    getqrext
 };
