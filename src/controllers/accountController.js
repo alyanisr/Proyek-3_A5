@@ -7,6 +7,8 @@ import crypto from 'crypto';
 import path from 'path';
 import { __dirname } from '../../path.js';
 import { get } from 'https';
+import { google } from 'googleapis';
+import { oauth2 } from 'googleapis/build/src/apis/oauth2/index.js';
 
 dotenv.config();
 
@@ -14,6 +16,36 @@ let otpStorage = {};
 let verificationTokenStorage = {};
 let otpstorage2 = {};
 
+const CLIENT_ID = process.env.CLIENT_ID;
+const CLIENT_SECRET = process.env.CLIENT_SECRET;
+const REDIRECT_URI = process.env.REDIRECT_URI;
+const REFRESH_TOKEN = process.env.REFRESH_TOKEN;
+
+const oAuth2Client = new google.auth.OAuth2(CLIENT_ID,CLIENT_SECRET,REDIRECT_URI)
+oAuth2Client.setCredentials({refresh_token: REFRESH_TOKEN})
+
+let transport; // Declare transport variable outside the function
+
+async function sendMail() {
+    try {
+        const accessToken = await oAuth2Client.getAccessToken();
+        transport = nodemailer.createTransport({
+            service: 'gmail',
+            auth: {
+                type: 'OAuth2',
+                user: process.env.USER,
+                clientId: CLIENT_ID,
+                clientSecret: CLIENT_SECRET,
+                refreshToken: REFRESH_TOKEN,
+                accessToken: accessToken,
+            }
+        });
+        return transport; // Return the transport for further use
+    } catch (error) {
+        console.error('Error creating transport:', error);
+        throw error;
+    }
+}
 
 const transporter = nodemailer.createTransport({
     host: "smtp.gmail.com",
@@ -25,7 +57,12 @@ const transporter = nodemailer.createTransport({
     }
 });
 
-const sendVerificationEmail = (email, otp, verificationToken) => {
+const sendVerificationEmail = async (email, otp, verificationToken) => {
+    // Ensure transport is created before sending email
+    if (!transport) {
+        await sendMail();
+    }
+
     const verificationLink = `http://localhost:8000/account/vmail?token=${verificationToken}&email=${email}`;
     const mailOptions = {
         from: {
@@ -38,10 +75,15 @@ const sendVerificationEmail = (email, otp, verificationToken) => {
         Atau klik link ini untuk verifikasi: ${verificationLink}`
     };
 
-    return transporter.sendMail(mailOptions);
+    return transport.sendMail(mailOptions);
 };
 
-const sendotpreset = (email, otp) => {
+const sendOtpReset = async (email, otp) => {
+    // Ensure transport is created before sending email
+    if (!transport) {
+        await sendMail();
+    }
+
     const mailOptions = {
         from: {
             name: "Authenticator",
@@ -52,8 +94,9 @@ const sendotpreset = (email, otp) => {
         text: `Kode OTP mu adalah ${otp}, akan kadaluwarsa dalam 5 menit.`
     };
 
-    return transporter.sendMail(mailOptions);
+    return transport.sendMail(mailOptions);
 };
+
 const lgcforgpass = async (req, res) => {
     try {
         const { email } = req.body;
@@ -65,7 +108,7 @@ const lgcforgpass = async (req, res) => {
         otpstorage2[email] = { otp, expiresAt: Date.now() + 5 * 60 * 1000 };
 
         // Send OTP reset email
-        await sendotpreset(email, otp);
+        await sendOtpReset(email, otp);
 
         // Set session data if needed
         req.session.email = email;
