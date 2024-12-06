@@ -6,9 +6,10 @@ import path from "path";
 const createSl = async (req, res) => {
   try {
     const { body } = req;
+    //cek apakah custom url sudah ada
     if (!(await isCustomUnique(body.custom))) {
-      res.status(400).send({
-        msg: "custom sudah ada",
+      res.status(409).send({
+        msg: "Custom URL sudah ada!",
       });
       return;
     } else {
@@ -23,40 +24,51 @@ const createSl = async (req, res) => {
       res.status(303).redirect(`http://localhost:8000/shortlink/res?id=${id}`);
     }
   } catch (err) {
-    res.status(500).send({error: err.message});
+    console.error("Terjadi error saat membuat shortlink:", err);
+    res.status(500).send({
+      msg: "Terjadi kesalahan server"
+    });
   }
 };
 
 const updateSl = async (req, res) => {
   try {
-    const { original_url, new_url } = req.body;
+    const { body } = req.body;
 
     // Cek apakah shortlink dengan original_url ada
-    const result = await Shortlink.getBy("short_url", original_url);
+    const result = await Shortlink.getBy("short_url", body.custom);
 
     if (result.rowCount === 0) {
-      res.status(404).send("Shortlink not found");
+      res.status(404).send({
+        msg: "Shortlink tidak ditemukan!"
+      });
       return;
     }
 
     // Pastikan user memiliki akses ke shortlink ini
     if (result.rows[0]["email"] !== req.session.email) {
-      res.status(401).send("Unauthorized");
+      res.status(401).send({
+        msg: "Unauthorized"
+      });
       return;
     }
 
     // Pastikan new_url unik
-    if (!isCustomUnique(new_url)) {
-      res.status(409).send("Shortlink already in use");
+    if (!isCustomUnique(body.custom)) {
+      res.status(409).send({
+        msg: "Custom URL sudah ada!"
+      });
       return;
     }
 
     // Update shortlink
-    await Shortlink.update("short_url", new_url, "short_url", original_url);
+    await Shortlink.patch(body.custom, body.title);
     res.status(200).send("Shortlink updated successfully");
   } catch (err) {
-    console.error("Error updating shortlink:", err);
-    res.status(500).send("An error occurred");
+    console.error("Terjadi error saat memperbarui shortlink:", err);
+    res.status(500).send({
+      msg: "Terjadi kesalahan server"
+    });
   }
 };
 
@@ -66,19 +78,28 @@ const deleteSl = async (req, res) => {
     const result = await Shortlink.getBy("short_url", body.short_url);
     // const result = await pool.query(`SELECT * FROM shortlinks WHERE short_url = $1`, [body.short_url]);
     if (result.rowCount === 0) {
-      res.status(404).send("No rows found");
+      res.status(404).send({
+        msg: "Shortlink tidak ditemukan!"
+      });
       return;
     }
 
     if (result.rows[0]["email"] != req.session.email) {
-      res.status(403).send("Forbidden");
+      res.status(403).send({
+        msg: "Forbidden"
+      });
       return;
     }
     await Shortlink.delete("short_url", body.short_url);
     // await pool.query(`DELETE FROM shortlinks WHERE short_url = $1`, [body.short_url]);
-    res.status(200).send("deleted successfully");
+    res.status(200).send({
+      msg: "Shortlink berhasil dihapus!"
+    });
   } catch (err) {
-    res.status(500).send(err.message);
+    console.error("Terjadi error saat menghapus shortlink", err);
+    res.status(500).send({
+      msg: "Terjadi kesalahan server"
+    });
   }
 };
 
@@ -88,7 +109,10 @@ const createResult = async (req, res) => {
       .status(200)
       .sendFile(path.join(__dirname, "src", "views", "generate.html"));
   } catch (err) {
-    res.status(500).send(err.message);
+    console.error("Terjadi error saat menampilkan page hasil pembuatan shortlink:", err);
+    res.status(500).send({
+      msg: "Terjadi kesalahan server"
+    });
   }
 };
 
@@ -97,10 +121,14 @@ const getByID = async (req, res) => {
     const { body } = req;
     const result = await Shortlink.getBy("id_shortlink", req.params.id);
     if (result.rowCount === 0) {
-      res.status(404).send("Not-found");
+      res.status(404).send({
+        msg: "Shortlink tidak ditemukan!"
+      });
       return;
     } else if (result.rows[0]["email"] != req.session.email) {
-      res.status(403).send("Forbidden");
+      res.status(403).send({
+        msg: "Forbidden"
+      });
       return;
     } else {
       res.status(200).send({
@@ -110,7 +138,10 @@ const getByID = async (req, res) => {
       });
     }
   } catch (err) {
-    res.status(500).send(err.message);
+    console.error("Terjadi error saat mengambil shortlink dari database:", err);
+    res.status(500).send({
+      msg: "Terjadi kesalahan server"
+    });
   }
 };
 
@@ -156,7 +187,10 @@ const firstRedirect = async (req, res) => {
       return;
     }
   } catch (err) {
-    res.status(500).send(err.message);
+    console.error("Terjadi error saat redirect pertama:", err);
+    res.status(500).send({
+      msg: "Terjadi kesalahan server"
+    });
   }
 };
 
@@ -166,7 +200,10 @@ const secondRedirect = async (req, res) => {
     // const result = await pool.query(`SELECT long_url FROM shortlinks WHERE id_shortlink = $1`, [req.params.id]);
     res.redirect(301, result.rows[0]["long_url"]);
   } catch (err) {
-    res.status(500).send("Server error");
+    console.error("Terjadi error saat redirect kedua:", err);
+    res.status(500).send({
+      msg: "Terjadi kesalahan server"
+    });
   }
 };
 
@@ -176,7 +213,10 @@ const notFound = async (req, res) => {
       .status(404)
       .sendFile(path.join(__dirname, "src", "views", "pageNotFound.html"));
   } catch (err) {
-    res.status(500).send(err.message);
+    console.error("Terjadi error saat menampilkan page not found:", err);
+    res.status(500).send({
+      msg: "Terjadi kesalahan server"
+    });
   }
 };
 
@@ -186,7 +226,10 @@ const shortlinkMenu = async (req, res) => {
       .status(200)
       .sendFile(path.join(__dirname, "src", "views", "shortlink.html"));
   } catch (err) {
-    res.status(500).send(err.message);
+    console.error("Terjadi error saat menampilkan page shortlink:", err);
+    res.status(500).send({
+      msg: "Terjadi kesalahan server"
+    });
   }
 };
 
@@ -205,11 +248,15 @@ const getShortlinksPaginated = async (req, res) => {
       rows: result.rows
     });
   } catch (error) {
-    res.status(500).send(error.message);
+    console.error("Terjadi error saat menampilkan list shortlink:", err);
+    res.status(500).send({
+      msg: "Terjadi kesalahan server"
+    });
   }
 };
 
 export const shorten = async (url, email, custom = null, method) => {
+  //tidak ada custom
   if (custom === null) {
     const id = await uniqueRandomID();
     custom = id;
@@ -217,6 +264,7 @@ export const shorten = async (url, email, custom = null, method) => {
     return id;
   }
 
+  //custom ada; cek apakah unik
   if (await isCustomUnique(custom)) {
     const id = await uniqueRandomID();
     await Shortlink.insert(id, url, custom, email, method);

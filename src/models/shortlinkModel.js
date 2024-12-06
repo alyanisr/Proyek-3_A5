@@ -21,10 +21,14 @@ Shortlink.update = async (field, value, fieldCriteria, valueCriteria) => {
   return await pool.query(sql, [value, valueCriteria]);
 };
 
+Shortlink.patch = async (custom, title) => {
+    pool.query(`UPDATE shortlinks SET short_url = $1, time_shortlink_last_updated = CURRENT_TIMESTAMP, shortlink_title = $2 WHERE short_url = $3`, [custom, title, custom]);
+};
+
 Shortlink.delete = async (field, value) => {
     const sql = format(`DELETE FROM shortlinks WHERE %I = $1`, field);
     return await pool.query(sql, [value]);
-}
+};
 
 Shortlink.insert = async (id_shortlink, long_url, short_url, email, method) => {
     return await pool.query(`INSERT INTO shortlinks(id_shortlink, long_url, short_url, time_shortlink_created, email, create_method, time_shortlink_last_updated) VALUES ($1, $2, $3, now()::timestamp, $4, $5, now()::timestamp)`, [id_shortlink, long_url, short_url, email, method]);

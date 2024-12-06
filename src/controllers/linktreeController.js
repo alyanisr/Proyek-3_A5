@@ -5,6 +5,8 @@ import { __dirname } from "../../path.js";
 import path from "path";
 import { shorten } from "./shortlinkController.js";
 import Shortlink from "../models/shortlinkModel.js";
+import { title } from "process";
+import { url } from "inspector";
 
 async function isIDunique(id) {
   const result = await Linktree.exists("id_linktree", id);
@@ -28,22 +30,10 @@ const linktreeMenu = async (req, res) => {
       .status(200)
       .sendFile(path.join(__dirname, "src", "views", "createlinktree.html"));
   } catch (e) {
-    console.log(e.message);
-    res.status(500).send(e.message);
-  }
-};
-
-const sendLinktreeData = async (req, res) => {
-  try {
-    const linktreeData = await Linktree.getBy("id_linktree", req.params.id);
-    const buttonData = await Button.getBy("id_linktree", req.params.id);
-    res.status(200).send({
-      linktreeData: linktreeData.rows,
-      buttonData: buttonData.rows,
+    console.error("Terjadi error saat menampilkan menu linktree:", e);
+    res.status(500).send({
+      msg: "Terjadi kesalahan server"
     });
-  } catch (e) {
-    console.log(e.message);
-    res.status(500).send(e.message);
   }
 };
 
@@ -55,7 +45,9 @@ const createRoom = async (req, res) => {
     if (
       (await Shortlink.exists("short_url", body.customUrl)).rows[0]["exists"]
     ) {
-      res.status(400).send("custom url already exists");
+      res.status(400).send({
+        msg: "Custom URL sudah digunakan!",
+      });
       return;
     }
 
@@ -77,8 +69,10 @@ const createRoom = async (req, res) => {
       .status(303)
       .redirect(`http://localhost:8000/linktree/room-edit?id=${id}`);
   } catch (e) {
-    console.log(e.message);
-    res.status(500).send(e.message);
+    console.error("Terjadi error saat membuat room:", e);
+    res.status(500).send({
+      msg: "Terjadi kesalahan server"
+    });
   }
 };
 
@@ -86,9 +80,19 @@ const saveContent = async (req, res) => {
   try {
     const { body } = req;
     const id = req.query.id;
-    // const result = await Linktree.getBy("id_linktree", id);
+    const result = await Linktree.getBy("id_linktree", id);
+
+    if (result.rowCount === 0) {
+      res.status(404).send({
+        msg: "Linktree tidak ditemukan!",
+      });
+      return;
+    }
+
     // if (result.rows[0]["email"] != req.session.email) {
-    //   res.status(401).send("Unathorized");
+    //   res.status(401).send({
+    //     msg: "Unauthorized"
+    //   });
     //   return;
     // }
     await Linktree.patch(body.title, body.bio, body.style, id);
@@ -99,26 +103,35 @@ const saveContent = async (req, res) => {
     );
     res.status(200).send("success");
   } catch (e) {
-    console.log(e.message);
-    res.status(500).send(e.message);
+    console.error("Terjadi error saat menyimpan konten link-in-bio:", e);
+    res.status(500).send({
+      msg: "Terjadi kesalahan server"
+    });
   }
 };
 
 const deleteLinktree = async (req, res) => {
   try {
-    // const result = await Linktree.getBy("id_linktree", req.params.id);
-    // if (result.rowCount === 0) {
-    //   res.status(404).send("Not-found");
+    const result = await Linktree.getBy("id_linktree", req.params.id);
+    if (result.rowCount === 0) {
+      res.status(404).send({
+        msg: "Linktree tidak ditemukan!"
+      });
+      return;
+    }
+    // else if (result.rows[0]["email"] != req.session.email) {
+    //   res.status(403).send({
+    //     msg: "Forbidden"
+    //   });
     //   return;
-    // } else if (result.rows[0]["email"] != req.session.email) {
-    //   res.status(403).send("Forbidden");
-    //   return;
-    // }
+    // };
     await Linktree.delete("id_linktree", req.params.id);
     res.status(200).send("success");
   } catch (e) {
-    console.log(e.message);
-    res.status(500).send(e.message);
+    console.error("Terjadi error saat menghapus linktree:", e);
+    res.status(500).send({
+      msg: "Terjadi kesalahan server"
+    });
   }
 };
 
@@ -137,10 +150,14 @@ const getLinktree = async (req, res) => {
     const result = await Linktree.getBy("id_linktree", req.params.id);
 
     if (result.rowCount === 0) {
-      res.status(404).send("Not-found");
+      res.status(404).send({
+        msg: "Linktree tidak ditemukan!"
+      });
       return;
     } else if (result.rows[0]["email"] != req.session.email) {
-      res.status(403).send("Forbidden");
+      res.status(403).send({
+        msg: "Forbidden"
+      });
       return;
     }
 
@@ -155,8 +172,10 @@ const getLinktree = async (req, res) => {
       url: "http://localhost:8000/" + result.rows[0]["linktree_url"],
     });
   } catch (e) {
-    console.log(e.message);
-    res.status(500).send(e.message);
+    console.error("Terjadi error saat mengambil konten link-in-bio:", e);
+    res.status(500).send({
+      msg: "Terjadi kesalahan server"
+    });
   }
 };
 
@@ -166,8 +185,10 @@ const linktreeRoom = async (req, res) => {
       .status(200)
       .sendFile(path.join(__dirname, "src", "views", "linktreeRoom.html"));
   } catch (e) {
-    console.log(e.message);
-    res.status(500).send(e.message);
+    console.error("Terjadi error saat menampilkan room:", e);
+    res.status(500).send({
+      msg: "Terjadi kesalahan server"
+    });
   }
 };
 
@@ -177,14 +198,15 @@ const linktreeRoomEdit = async (req, res) => {
       .status(200)
       .sendFile(path.join(__dirname, "src", "views", "buildold.html"));
   } catch (e) {
-    console.log(e.message);
-    res.status(500).send(e.message);
+    console.error("Terjadi error saat menampilkan room edit:", e);
+    res.status(500).send({
+      msg: "Terjadi kesalahan server"
+    });
   }
 };
 
 export default {
   linktreeMenu,
-  sendLinktreeData,
   createRoom,
   getLinktree,
   saveContent,
