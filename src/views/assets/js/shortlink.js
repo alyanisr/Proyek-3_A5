@@ -27,6 +27,13 @@ function generateShortlink() {
 //   sidebar.classList.toggle("expanded");
 // });
 
+function truncateString(str, maxLength) {
+  if (str.length > maxLength) {
+    return str.substring(0, maxLength) + "...";
+  }
+  return str;
+}
+
 // Handle form submission
 document
   .getElementById("short-url-form")
@@ -35,91 +42,94 @@ document
     generateQRCode();
   });
 
-function generateQRCode() {
-  const urlInputElement = document.getElementById("url-input");
-  const titleInputElement = document.getElementById("title-input");
-  const downloadButton = document.getElementById("download-btn");
-  const copyButton = document.getElementById("copy-btn");
-
-  const urlValue = urlInputElement.value;
-  const titleValue = titleInputElement.value;
-
-  if (urlValue && titleValue) {
-    // Save URL and Title
-    const qrData = urlValue; // URL for QR code
-
-    // Replace input fields with spans
-    const titleSpan = document.createElement("span");
-    titleSpan.textContent = titleValue;
-    titleInputElement.parentNode.replaceChild(titleSpan, titleInputElement);
-
-    const urlSpan = document.createElement("span");
-    urlSpan.textContent = urlValue;
-    urlInputElement.parentNode.replaceChild(urlSpan, urlInputElement);
-
-    // Hide the generate button and show the preview section
-    document.getElementById("generate-btn").style.display = "none";
-    document.getElementById("qr-preview").style.display = "block";
-
-    // Generate short URL
-    const shortUrl = generateShortUrl(urlValue);
-
-    // Generate QR Code and display it on canvas
-    const qrCanvas = document.getElementById("qr-canvas");
-    const ctx = qrCanvas.getContext("2d");
-    const img = new Image();
-
-    // URL for QR code from API
-    const qrCodeDataUrl = generateQRCodeFromUrl(qrData);
-    console.log("Generated QR Code URL: ", qrCodeDataUrl); // Debug URL
-
-    img.onload = function () {
-      ctx.clearRect(0, 0, qrCanvas.width, qrCanvas.height);
-      ctx.drawImage(img, 0, 0, qrCanvas.width, qrCanvas.height);
-
-      // Show download and copy buttons
-      downloadButton.style.display = "block";
-      copyButton.style.display = "block";
-
-      // Function to download the QR Code
-      downloadButton.onclick = function () {
-        const link = document.createElement("a");
-        link.href = qrCodeDataUrl;
-        link.download = "qrcode.png";
-        link.click();
+  function generateQRCode() {
+    const urlInputElement = document.getElementById("url-input");
+    const titleInputElement = document.getElementById("title-input");
+    const downloadButton = document.getElementById("download-btn");
+    const copyButton = document.getElementById("copy-btn");
+  
+    const urlValue = urlInputElement.value;
+    const titleValue = titleInputElement.value;
+  
+    if (urlValue && titleValue) {
+      // Save URL and Title
+      const qrData = urlValue; // URL for QR code
+  
+      // Replace input fields with spans
+      const titleSpan = document.createElement("span");
+      titleSpan.textContent = titleValue;
+      titleInputElement.parentNode.replaceChild(titleSpan, titleInputElement);
+  
+      const urlSpan = document.createElement("span");
+      urlSpan.textContent = urlValue;
+      urlInputElement.parentNode.replaceChild(urlSpan, urlInputElement);
+  
+      // Hide the generate button and show the preview section
+      document.getElementById("generate-btn").style.display = "none";
+      document.getElementById("qr-preview").style.display = "block";
+  
+      // Generate short URL
+      const shortUrl = generateShortUrl(urlValue);
+  
+      // Generate QR Code and display it on canvas
+      const qrCanvas = document.getElementById("qr-canvas");
+      const ctx = qrCanvas.getContext("2d");
+      const img = new Image();
+  
+      // URL for QR code from API
+      const qrCodeDataUrl = generateQRCodeFromUrl(qrData);
+      console.log("Generated QR Code URL: ", qrCodeDataUrl); // Debug URL
+  
+      img.onload = function () {
+        ctx.clearRect(0, 0, qrCanvas.width, qrCanvas.height);
+        ctx.drawImage(img, 0, 0, qrCanvas.width, qrCanvas.height);
+  
+        // Show download and copy buttons
+        downloadButton.style.display = "block";
+        copyButton.style.display = "block";
+  
+        // Function to download the QR Code
+        downloadButton.onclick = function () {
+          const link = document.createElement("a");
+          link.href = qrCodeDataUrl;
+          link.download = "qrcode.png";
+          link.click();
+        };
+  
+        // Function to copy QR Code to clipboard
+        copyButton.onclick = function () {
+          copyImageToClipboard(qrCodeDataUrl); // Implement this function if not done
+        };
+  
+        // Display the short URL with the prefix "plb.sh/"
+        const cartList = document.getElementById("cart-list");
+        const cartItem = document.createElement("li");
+        cartItem.classList.add("cart-item");
+  
+        // Truncate long URL for display
+        const shortLongUrl = truncateString(urlValue, 50);
+  
+        cartItem.innerHTML = `
+          <div>
+            <p><strong>Short URL:</strong> <a href="${shortUrl}" target="_blank">${shortUrl}</a></p>
+            <p><strong>Destination URL:</strong> <a href="${urlValue}" target="_blank">${shortLongUrl}</a></p>
+            <p><strong>Custom URL:</strong> <a href="${urlValue}" target="_blank">${urlValue}</a></p>
+          </div>  
+        `;
+  
+        cartList.appendChild(cartItem);
       };
-
-      // Function to copy QR Code to clipboard
-      copyButton.onclick = function () {
-        copyImageToClipboard(qrCodeDataUrl); // Implement this function if not done
+  
+      img.onerror = function () {
+        console.error("Failed to load image.");
+        alert("Failed to load QR code. Please try again.");
       };
-
-      // Display the short URL with the prefix "plb.sh/"
-      const cartList = document.getElementById("cart-list");
-      const cartItem = document.createElement("li");
-      cartItem.classList.add("cart-item");
-
-      cartItem.innerHTML = `
-        <div>
-          <p><strong>Short URL:</strong> <a href="${shortUrl}" target="_blank">${shortUrl}</a></p>
-          <p><strong>Destination URL:</strong> <a href="${urlValue}" target="_blank">${urlValue}</a></p>
-          <p><strong>Custom URL:</strong> <a href="${urlValue}" target="_blank">${urlValue}</a></p>
-        </div>
-      `;
-
-      cartList.appendChild(cartItem);
-    };
-
-    img.onerror = function () {
-      console.error("Failed to load image.");
-      alert("Failed to load QR code. Please try again.");
-    };
-
-    img.src = qrCodeDataUrl;
-  } else {
-    alert("Please enter both a valid Title and URL");
+  
+      img.src = qrCodeDataUrl;
+    } else {
+      alert("Please enter both a valid Title and URL");
+    }
   }
-}
 
 function generateShortUrl(userUrl) {
   // Ensure the generated short URL has the prefix 'http://localhost:8000/' and includes the user-provided URL
@@ -136,13 +146,6 @@ function generateQRCodeFromUrl(url) {
 }
 
 let currentShortlink = "";
-
-function truncateString(str, maxLength) {
-  if (str.length > maxLength) {
-    return str.substring(0, maxLength) + "...";
-  }
-  return str;
-}
 
 // Fungsi untuk render data shortlink history ke HTML
 async function renderShortlinkHistory() {
@@ -161,20 +164,22 @@ async function renderShortlinkHistory() {
     data.rows.forEach(item => {
       const historyItem = document.createElement("div");
       historyItem.className = "history-item";
+      const baseURL = window.location.origin;
+      const fullURL = `${baseURL}/${item.short_url}`;
       const shortLongUrl = truncateString(item.long_url || "No url available", 50);
 
       historyItem.dataset.id = item.id;
       historyItem.innerHTML = `
         <i data-feather="link-2"></i>
         <div class="link-details">
-          <p class="shortUrl">${item.short_url || 'No shorts available'} </p>
+          <p class="shortUrl">${fullURL || 'No shorts available'} </p>
           <p class="longUrl">${shortLongUrl}</p>
           <p><i data-feather="calendar"></i> ${item.time_shortlink_created}</p>
         </div>
         <div class="actions">
           <button onclick="copyShortlink('${item.short_url}')"><i data-feather="copy"></i> Copy</button>
           <button onclick="shareShortlink('${item.short_url}')"><i data-feather="share-2"></i> Share</button>
-          <button><i data-feather="edit"></i> Edit</button>
+          <button onclick="openEditModal('${item.short_url}')"><i data-feather="edit"></i> Edit</button>
           <button onclick="deleteShortlink('${item.short_url}')"><i data-feather="trash-2"></i> Delete</button>
         </div>
       `;
@@ -220,16 +225,14 @@ function setShortlink(shortlink) {
   currentShortlink = shortlink; // Set currentShortlink saat shortlink baru dibuat
 }
 
-async function deleteShortlink(email, shortlink) {
-  try {
-    const response = await fetch('/config', {  // Ganti endpoint menjadi '/config'
+async function deleteShortlink(shortlink) {
+    const response = await fetch('/shortlink/config', { 
       method: 'DELETE',
       headers: {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
         short_url: shortlink,
-        email: email,
       }),
     });
 
@@ -243,10 +246,6 @@ async function deleteShortlink(email, shortlink) {
     } else {
       throw new Error("Failed to delete shortlink");
     }
-  } catch (error) {
-    console.error("Error deleting shortlink:", error);
-    alert("Error deleting shortlink");
-  }
 }
 
 
