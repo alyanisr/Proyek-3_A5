@@ -29,34 +29,34 @@ const createSl = async (req, res) => {
 
 const updateSl = async (req, res) => {
   try {
-    const { body } = req;
-    let result = await Shortlink.getBy("short_url", body.original_url);
-    // result = await pool.query(`SELECT * FROM shortlinks WHERE short_url = $1`, [body.original_url]);
+    const { original_url, new_url } = req.body;
+
+    // Cek apakah shortlink dengan original_url ada
+    const result = await Shortlink.getBy("short_url", original_url);
 
     if (result.rowCount === 0) {
-      res.status(404).send("No rows found");
+      res.status(404).send("Shortlink not found");
       return;
     }
 
-    if (result.rows[0]["email"] != req.session.email) {
-      res.status(403).send("Forbidden");
+    // Pastikan user memiliki akses ke shortlink ini
+    if (result.rows[0]["email"] !== req.session.email) {
+      res.status(401).send("Unauthorized");
       return;
     }
 
-    if (isCustomUnique(result.rows[0]["short_url"])) {
-      await Shortlink.update(
-        "short_url",
-        body.new_url,
-        "short_url",
-        body.original_url
-      );
-      // await pool.query(`UPDATE shortlinks SET short_url = $1 WHERE short_url = $2`, [body.new_url, body.original_url]);
-      res.status(200).send("edit berhasil");
-    } else {
-      res.status(409).send("not unique");
+    // Pastikan new_url unik
+    if (!isCustomUnique(new_url)) {
+      res.status(409).send("Shortlink already in use");
+      return;
     }
+
+    // Update shortlink
+    await Shortlink.update("short_url", new_url, "short_url", original_url);
+    res.status(200).send("Shortlink updated successfully");
   } catch (err) {
-    res.status(500).send(err.message);
+    console.error("Error updating shortlink:", err);
+    res.status(500).send("An error occurred");
   }
 };
 
