@@ -13,9 +13,13 @@ Shortlink.getBy = async (field, value) => {
 }
 
 Shortlink.update = async (field, value, fieldCriteria, valueCriteria) => {
-    const sql = format(`UPDATE shortlinks SET %I = $1 WHERE %I = $2`, field, fieldCriteria);
-    return await pool.query(sql, [value, valueCriteria]);
-}
+  const sql = format(
+    `UPDATE shortlinks SET %I = $1, time_shortlink_last_updated = CURRENT_TIMESTAMP WHERE %I = $2`,
+    field,
+    fieldCriteria
+  );
+  return await pool.query(sql, [value, valueCriteria]);
+};
 
 Shortlink.delete = async (field, value) => {
     const sql = format(`DELETE FROM shortlinks WHERE %I = $1`, field);
