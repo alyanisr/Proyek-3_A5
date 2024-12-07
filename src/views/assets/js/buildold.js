@@ -74,7 +74,7 @@ function loadLinktreeData() {
   const urlParams = new URLSearchParams(window.location.search);
   const id = urlParams.get("id");
 
-  fetch(`/api/linktree/${id}`)
+  fetch(`/linktree/get/${id}`)
     .then((response) => response.json())
     .then((data) => {
       // Set links dari data database
@@ -219,7 +219,7 @@ async function fetchLinktreeData() {
   }
 
   try {
-    const response = await fetch(`/api/linktree/${id}`);
+    const response = await fetch(`/linktree/get/${id}`);
     if (!response.ok) {
       throw new Error("Gagal memuat data Linktree");
     }
