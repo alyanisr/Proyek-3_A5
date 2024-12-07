@@ -32,42 +32,60 @@ function showAddLinkModal() {
   linkModal.show();
 }
 
+// // At the top of buildold.js, expose links array globally
+// window.links = links;
+
+// Update the saveLink function to also update the global array
 function saveLink() {
   const form = document.getElementById("linkForm");
-  if (form.checkValidity()) {
-    const newLinkUrl = document.getElementById("linkUrl").value;
 
-    // Cek apakah URL sudah ada di daftar links
-    const isDuplicateLink = links.some((link) => link.url === newLinkUrl);
+  // Validasi input
+  const title = document.getElementById("linkTitle").value.trim();
+  const url = document.getElementById("linkUrl").value.trim();
 
-    if (isDuplicateLink) {
-      alert("Another button is using this link. Please enter a different one.");
-      return;
-    }
-
-    const linkData = {
-      title: document.getElementById("linkTitle").value,
-      description: document.getElementById("linkDescription").value,
-      url: newLinkUrl,
-      short: document.getElementById("linkShort").value,
-    };
-
-    const index = document.getElementById("linkIndex").value;
-    if (index === "") {
-      // Tambah link baru
-      links.push(linkData);
-    } else {
-      // Update link yang sudah ada
-      links[index] = linkData;
-    }
-
-    renderLinks();
-    linkModal.hide();
-    form.reset();
-  } else {
-    alert("Please fill in all required fields.");
+  if (!title || !url) {
+    alert("Title and Destination URL are required.");
+    return;
   }
+
+  // Cek duplikasi
+  const isDuplicateLink = links.some((link) => link.url === url);
+  if (isDuplicateLink) {
+    alert("This link already exists. Please enter a different URL.");
+    return;
+  }
+
+  const linkData = {
+    title: title,
+    url: url,
+    short:
+      document.getElementById("linkShort").value.trim() ||
+      title.toLowerCase().replace(/\s+/g, "-").slice(0, 10),
+  };
+
+  const index = document.getElementById("linkIndex").value;
+  if (index === "") {
+    // Tambah link baru
+    links.push(linkData);
+    window.links = links; // Update global array
+  } else {
+    // Update link yang sudah ada
+    links[index] = linkData;
+    window.links = links; // Update global array
+  }
+
+  renderLinks();
+  linkModal.hide();
+  form.reset();
 }
+
+// Add event listener to save links button
+document.addEventListener("DOMContentLoaded", () => {
+  const saveLinkButton = document.getElementById("saveLinkButton");
+  if (saveLinkButton) {
+    saveLinkButton.addEventListener("click", saveLinks);
+  }
+});
 
 // Tambahkan fungsi untuk memuat ulang data dari database saat halaman dimuat
 function loadLinktreeData() {
@@ -152,6 +170,131 @@ function deleteLink(index) {
   }
 }
 
+// Ambil Linktree ID dari URL
+function getLinktreeId() {
+  const urlParams = new URLSearchParams(window.location.search);
+  const id = urlParams.get("id");
+
+  if (!id) {
+    console.error("Linktree ID tidak ditemukan di URL!");
+    alert("Invalid Linktree ID. Please check the URL.");
+  }
+
+  return id;
+}
+
+// Simpan ID di localStorage atau variabel global agar bisa diakses di file lain
+let linktreeId = getLinktreeId();
+
+// Fungsi untuk mengambil data dari API
+async function fetchLinktreeData() {
+  const urlParams = new URLSearchParams(window.location.search);
+  const id = urlParams.get("id");
+  if (!id) {
+    alert("ID tidak ditemukan di URL!");
+    return;
+  }
+
+  try {
+    const response = await fetch(`/linktree/get/${id}`);
+    if (!response.ok) {
+      throw new Error("Gagal memuat data Linktree");
+    }
+
+    const data = await response.json();
+    console.log("Button Data:", data.buttonData);
+
+    // Broadcast button data to designLinktree.js
+    const buttonDataEvent = new CustomEvent("buttonDataReceived", {
+      detail: {
+        buttonData: data.buttonData || [],
+        linktreeId: id,
+      },
+    });
+    window.dispatchEvent(buttonDataEvent);
+
+    // Render tombol berdasarkan data buttonData
+    renderButtons(data.buttonData);
+  } catch (error) {
+    console.error("Error loading buttons:", error);
+  }
+}
+
+function renderButtons(buttonData = []) {
+  const previewLinks = document.getElementById("previewLinks");
+
+  if (!previewLinks) {
+    console.error("Preview links container not found!");
+    return;
+  }
+
+  // Bersihkan konten sebelumnya
+  previewLinks.innerHTML = "";
+
+  // Pastikan buttonData adalah array
+  if (!Array.isArray(buttonData)) {
+    console.error("Invalid button data:", buttonData);
+    return;
+  }
+
+  buttonData.forEach((button) => {
+    if (!button || !button.title || !button.url) {
+      console.warn("Skipping invalid button:", button);
+      return;
+    }
+
+    const previewLink = document.createElement("a");
+    previewLink.href = button.url;
+    previewLink.className = "preview-link";
+    previewLink.innerText = button.title;
+    previewLinks.appendChild(previewLink);
+  });
+}
+
+function fetchLinktreeData() {
+  const urlParams = new URLSearchParams(window.location.search);
+  const id = urlParams.get("id");
+
+  if (!id) {
+    console.error("No Linktree ID found in URL");
+    return;
+  }
+
+  fetch(`/linktree/get/${id}`)
+    .then((response) => {
+      if (!response.ok) {
+        throw new Error("Failed to fetch Linktree data");
+      }
+      return response.json();
+    })
+    .then((data) => {
+      console.log("Received data:", data);
+
+      // Dispatch button data event
+      const buttonDataEvent = new CustomEvent("buttonDataReceived", {
+        detail: {
+          buttonData: data.buttonData || [],
+          linktreeId: id,
+        },
+      });
+      window.dispatchEvent(buttonDataEvent);
+
+      // Render buttons
+      renderButtons(data.buttonData || []);
+    })
+    .catch((error) => {
+      console.error("Error loading buttons:", error);
+      // Optionally show user-friendly error message
+      alert("Failed to load links. Please try again later.");
+    });
+}
+
+// Panggil fetchLinktreeData saat halaman dimuat
+document.addEventListener("DOMContentLoaded", fetchLinktreeData);
+
+// const urlParams = new URLSearchParams(window.location.search);
+// const id = urlParams.get("id"); // Ambil ID dari URL
+
 // Get DOM elements
 const titleInput = document.getElementById("titleInput");
 const bioInput = document.getElementById("bioInput");
@@ -208,17 +351,31 @@ function uploadImage() {
   input.click();
 }
 
-function handleImageUpload(e) {
+// Add this variable to store the current profile image
+let currentProfileImage = null;
+
+// Update the handleImageUpload function
+async function handleImageUpload(e) {
   const file = e.target.files[0];
   if (file) {
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      updateProfileImage(event.target.result);
+    try {
+      const base64String = await fileToBase64(file);
+      currentProfileImage = base64String;
+
+      // Update both preview and actual image
+      updateProfileImage(`data:${file.type};base64,${base64String}`);
+
+      // Store in window object for collectDesignData
+      window.currentProfileImageBase64 = base64String;
+
+      // Close modal
       bootstrap.Modal.getInstance(
         document.getElementById("imageOptionsModal")
       ).hide();
-    };
-    reader.readAsDataURL(file);
+    } catch (error) {
+      console.error("Error processing image:", error);
+      alert("Failed to process image. Please try again.");
+    }
   }
 }
 
@@ -276,20 +433,23 @@ function changeFont(fontFamily) {
 function changeFontColor(color) {
   const previewContent = document.getElementById("previewContent");
   if (previewContent) {
-    // Terapkan warna ke seluruh elemen dalam preview
+    // Apply to all text elements including username, bio
     previewContent.style.color = color;
 
-    // Query semua elemen teks dalam preview
+    // Explicitly set color for text elements
     const textElements = previewContent.querySelectorAll(
       "#previewUsername, #previewBio, .text-white"
     );
-
     textElements.forEach((element) => {
-      // Secara eksplisit set warna untuk setiap elemen
-      element.style.color = color;
-
-      // Tambahkan !important untuk memastikan warna diterapkan
       element.style.setProperty("color", color, "important");
+    });
+
+    // Apply to preview links (buttons)
+    const previewLinks = document.querySelectorAll(".preview-link");
+    previewLinks.forEach((link) => {
+      link.style.setProperty("color", color, "important");
+      // Store the color as data attribute for tracking
+      link.setAttribute("data-font-color", color);
     });
   }
 }
@@ -300,21 +460,29 @@ function changeButtonStyle(style) {
   const buttons = document.querySelectorAll(".block-shape");
 
   // Remove active class from all button style options
-  buttons.forEach((btn) => btn.classList.remove("active"));
+  buttons.forEach((btn) => {
+    btn.classList.remove("active");
+    // Reset data-style attribute
+    btn.removeAttribute("data-style");
+  });
 
-  // Add active class to selected style
+  // Add active class and data-style to selected style
   const selectedButton = document.querySelector(
     `.block-shape[onclick="changeButtonStyle('${style}')"]`
   );
   if (selectedButton) {
     selectedButton.classList.add("active");
+    selectedButton.setAttribute("data-style", style);
   }
 
   // Apply button style to preview links
-  previewLinks.forEach((link) => applyButtonStyle(link, style));
+  previewLinks.forEach((link) => {
+    applyButtonStyle(link, style);
+    // Tambahkan atribut data untuk tracking
+    link.setAttribute("data-button-style", style);
+  });
 }
 
-// Apply specific button style
 function applyButtonStyle(element, style) {
   switch (style) {
     case "rounded":
@@ -334,143 +502,114 @@ function applyButtonStyle(element, style) {
 function changeButtonColor(color) {
   const previewLinks = document.querySelectorAll(".preview-link");
   previewLinks.forEach((link) => {
+    // Set background color
     link.style.backgroundColor = color;
+    // Tambahkan data attribute untuk tracking
+    link.setAttribute("data-button-color", color);
   });
 }
 
 // Theme management
-// Function to apply custom gradient
-function applyCustomGradient() {
+
+// Update theme sections to show which is active
+function updateActiveThemeSection() {
+  const sections = {
+    gradient: document.getElementById("gradientSection"),
+    solid: document.getElementById("solidSection"),
+    image: document.getElementById("imageSection"),
+  };
+
+  // Update active section styling
+  Object.keys(sections).forEach((type) => {
+    if (sections[type]) {
+      if (type === activeThemeType) {
+        sections[type].classList.add("active-section");
+      } else {
+        sections[type].classList.remove("active-section");
+      }
+    }
+  });
+
+  // Update theme options active state
+  document.querySelectorAll(".theme-option").forEach((option) => {
+    option.classList.remove("active");
+  });
+  document.querySelectorAll(".image-option").forEach((option) => {
+    option.classList.remove("active");
+  });
+}
+
+// Update theme management
+let activeThemeType = "gradient"; // 'gradient', 'solid', or 'image'
+let themeValue = {
+  gradient: {
+    color1: "#4158d0",
+    color2: "#c850c0",
+  },
+  solid: "#3498db",
+  image: null,
+};
+
+// Update the applyTheme function
+function applyTheme(type, value) {
+  const previewContent = document.getElementById("previewContent");
+  if (!previewContent) return;
+
+  activeThemeType = type;
+  themeValue[type] = value;
+
+  switch (type) {
+    case "gradient":
+      previewContent.style.backgroundImage = `linear-gradient(to bottom, ${value.color1}, ${value.color2})`;
+      previewContent.style.backgroundColor = "";
+      break;
+    case "solid":
+      previewContent.style.backgroundImage = "none";
+      previewContent.style.backgroundColor = value;
+      break;
+    case "image":
+      previewContent.style.backgroundImage = `url('${value}')`;
+      previewContent.style.backgroundSize = "cover";
+      previewContent.style.backgroundPosition = "center";
+      previewContent.style.backgroundColor = "";
+      break;
+  }
+
+  updateActiveThemeSection();
+}
+
+// Handle gradient theme selection
+function handleGradientSelect(color1, color2) {
+  applyTheme("gradient", { color1, color2 });
+}
+
+// Handle solid color selection
+function handleSolidSelect(color) {
+  applyTheme("solid", color);
+}
+
+// Handle image selection
+function handleImageSelect(imageUrl) {
+  applyTheme("image", imageUrl);
+}
+
+// Custom gradient input handler
+function handleCustomGradient() {
   const color1 = document.getElementById("gradientColor1").value;
   const color2 = document.getElementById("gradientColor2").value;
-  changeTheme(color1, color2);
+  handleGradientSelect(color1, color2);
 }
 
-// Function to apply solid color
-function applySolidColor() {
+// Custom solid color input handler
+function handleCustomSolid() {
   const color = document.getElementById("solidColor").value;
-  changeTheme(color, color);
+  handleSolidSelect(color);
 }
 
-// Enhanced theme change function
-function changeTheme(color1, color2) {
-  const previewContent = document.getElementById("previewContent");
-  if (previewContent) {
-    previewContent.style.background =
-      color1 === color2
-        ? color1
-        : `linear-gradient(to bottom, ${color1}, ${color2})`;
-
-    // Update active states
-    document.querySelectorAll(".theme-option").forEach((option) => {
-      const background = option.style.background;
-      const isActive =
-        background.includes(color1) && background.includes(color2);
-      option.classList.toggle("active", isActive);
-    });
-  }
-}
-
-//background image
-const backgroundImages = [
-  "/assets/img/Gedung-H2.jpg",
-  "/assets/img/gedung-h3.jpg",
-  "/assets/img/masjid-lh.jpg",
-  "/assets/img/sc2.jpg",
-  "/assets/img/sc.jpg",
-];
-
-// Fungsi untuk menginisialisasi pilihan background image
-function initializeBackgroundImages() {
-  console.log("Fungsi initializeBackgroundImages dipanggil");
-
-  const themeSection = document.getElementById("theme");
-  console.log("Elemen theme section:", themeSection);
-
-  const backgroundContainer = document.createElement("div");
-  backgroundContainer.id = "background-image-options";
-  backgroundContainer.className =
-    "d-flex flex-wrap justify-content-center mb-3";
-
-  backgroundImages.forEach((imageUrl, index) => {
-    console.log(`Memproses gambar: ${imageUrl}`);
-
-    const imageOption = document.createElement("div");
-    imageOption.className = "background-image-option m-2 position-relative";
-    imageOption.style.width = "80px";
-    imageOption.style.height = "60px";
-    imageOption.style.overflow = "hidden";
-    imageOption.style.cursor = "pointer";
-    imageOption.style.border = "2px solid transparent";
-
-    const img = document.createElement("img");
-    img.src = imageUrl;
-    img.style.width = "100%";
-    img.style.height = "100%";
-    img.style.objectFit = "cover";
-
-    imageOption.appendChild(img);
-    imageOption.onclick = () => changeBackgroundImage(imageUrl);
-    backgroundContainer.appendChild(imageOption);
-  });
-
-  // Periksa apakah tema section ada
-  if (themeSection) {
-    const backgroundSection = document.createElement("div");
-    backgroundSection.innerHTML = `<h6 class="mb-2">Background Image</h6>`;
-    backgroundSection.appendChild(backgroundContainer);
-
-    console.log("Mencoba menambahkan background section");
-    themeSection.appendChild(backgroundSection);
-    console.log("Background section ditambahkan");
-  } else {
-    console.error("Elemen theme section tidak ditemukan!");
-  }
-}
-
-// Fungsi untuk mengubah background image
-function changeBackgroundImage(imageUrl) {
-  const previewContent = document.getElementById("previewContent");
-  if (previewContent) {
-    // Set background image dengan cover dan center
-    previewContent.style.backgroundImage = `url('${imageUrl}')`;
-    previewContent.style.backgroundSize = "cover";
-    previewContent.style.backgroundPosition = "center";
-
-    // Tambahkan properti untuk responsivitas
-    previewContent.style.backgroundRepeat = "no-repeat";
-    previewContent.style.width = "100%";
-    previewContent.style.height = "100%";
-    previewContent.style.minHeight = "500px"; // Minimal tinggi untuk berbagai layar
-  }
-
-  // Update status aktif untuk pilihan background image
-  document.querySelectorAll(".background-image-option").forEach((option) => {
-    const img = option.querySelector("img");
-    const isActive = img && img.src.includes(imageUrl);
-
-    // Tambahkan efek visual untuk gambar yang dipilih
-    option.style.border = isActive
-      ? "2px solid #007bff"
-      : "2px solid transparent";
-  });
-}
-
-// Tambahkan event listener pada setiap gambar
+// Initialize theme sections
 document.addEventListener("DOMContentLoaded", () => {
-  const backgroundImageOptions = document.querySelectorAll(
-    ".background-image-option"
-  );
-
-  backgroundImageOptions.forEach((option) => {
-    const img = option.querySelector("img");
-
-    option.addEventListener("click", () => {
-      if (img) {
-        changeBackgroundImage(img.src);
-      }
-    });
-  });
+  // Set default theme
+  applyTheme("gradient", themeValue.gradient);
 });
 
 // Initialize everything when the document is ready
@@ -500,97 +639,254 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("solidColor").value = "#3498db";
 });
 
-// Fungsi untuk menyimpan perubahan
-async function saveChanges() {
+// Ambil Linktree ID dari localStorage atau URL
+function getLinktreeId() {
   const urlParams = new URLSearchParams(window.location.search);
-  const idLinktree = urlParams.get("id"); // Ambil ID dari URL
-  if (!idLinktree) {
-    alert("ID Linktree tidak ditemukan di URL!");
-    return;
-  }
+  const id = urlParams.get("id");
 
-  // Data yang akan dikirim, bisa disesuaikan
-  const title = "title shortlink apa"; // Contoh judul
-  const bio = "bio bio bio"; // Contoh bio
-
-  // Data gaya yang akan dikirim, bisa disesuaikan
-  const style = {
-    font: "consolas",
-    "bg-color": "red",
-  };
-
-  // Membuat objek data yang akan dikirim
-  const data = {
-    title: title,
-    bio: bio,
-    style: style,
-    btnArray: links,
-  };
-
-  // Mengirim data dengan metode PATCH
-  try {
-    const response = await fetch(
-      `http://localhost:8000/linktree/save?id=${idLinktree}`,
-      {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(data),
-      }
-    );
-
-    if (response.ok) {
-      alert("Perubahan berhasil disimpan!");
-    } else {
-      alert("Gagal menyimpan perubahan.");
-    }
-  } catch (error) {
-    console.error("Terjadi kesalahan:", error);
-    alert("Terjadi kesalahan saat menyimpan perubahan.");
-  }
-}
-
-// Fungsi untuk mengambil data dari API
-async function fetchLinktreeData() {
-  const urlParams = new URLSearchParams(window.location.search);
-  const id = urlParams.get("id"); // Ambil ID dari URL
   if (!id) {
-    alert("ID tidak ditemukan di URL!");
-    return;
+    console.error("Linktree ID tidak ditemukan di URL!");
+    alert("Invalid Linktree ID. Please check the URL.");
   }
 
+  return id;
+}
+
+// Global variables to store button data and linktree ID
+let buttonData = [];
+let currentLinktreeId = getLinktreeId();
+
+// Listen for button data from buildold.js
+window.addEventListener("buttonDataReceived", (event) => {
+  buttonData = event.detail.buttonData;
+  currentLinktreeId = event.detail.linktreeId;
+  console.log("Received Button Data:", buttonData);
+});
+
+async function saveChanges() {
   try {
-    const response = await fetch(`/linktree/get/${id}`);
-    if (!response.ok) {
-      throw new Error("Gagal memuat data Linktree");
+    // Validate currentLinktreeId
+    if (!currentLinktreeId) {
+      throw new Error("Linktree ID tidak ditemukan!");
     }
 
-    const data = await response.json();
-    console.log("Button Data:", data.btnArray); // Debugging
+    // Debug: Log collected data
+    console.log("Collecting design data...");
+    const designData = await collectDesignData();
+    console.log("Collected Design Data:", designData);
 
-    // Render tombol berdasarkan data buttonData
-    renderButtons(data.btnArray);
+    // Get button data from buildold.js
+    const buttonData = window.links
+      ? window.links.map((link) => ({
+          name: link.title, // Ganti title menjadi name
+          url: link.url,
+          short: link.short,
+        }))
+      : [];
+
+    console.log("Button Data:", buttonData);
+
+    // Prepare data for sending
+    const jsonData = {
+      title: designData.title || "",
+      bio: designData.bio || "",
+      style: {
+        ...designData.style,
+        profileImage: designData.style.profileImage || null,
+        theme: {
+          type: activeThemeType,
+          value: themeValue[activeThemeType],
+        },
+      },
+      btnArray: buttonData,
+    };
+
+    console.log("JSON Data to send:", jsonData);
+
+    // Debugging: Check server URL
+    const saveUrl = `http://localhost:8000/linktree/save?id=${currentLinktreeId}`;
+    console.log("Save URL:", saveUrl);
+
+    const response = await fetch(saveUrl, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(jsonData),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(
+        `HTTP error! status: ${response.status}, message: ${errorText}`
+      );
+    }
+
+    // Tambahkan penanganan respons yang fleksibel
+    const responseText = await response.text();
+    try {
+      const responseData = JSON.parse(responseText);
+      console.log("Server Response:", responseData);
+    } catch {
+      // Jika bukan JSON, log teks asli
+      console.log("Server Response (not JSON):", responseText);
+    }
+
+    alert("Perubahan berhasil disimpan!");
   } catch (error) {
-    console.error("Error loading buttons:", error);
+    console.error("Detailed error:", error);
+    console.error("Error stack:", error.stack);
+    alert(`Terjadi kesalahan: ${error.message}`);
   }
 }
 
-// Fungsi untuk merender tombol dari data
-function renderButtons(buttonData) {
-  const buttonContainer = document.getElementById("buttonContainer");
-  buttonContainer.innerHTML = ""; // Bersihkan kontainer
-
-  buttonData.forEach((button) => {
-    const btn = document.createElement("button");
-    btn.textContent = button.button_name; // Sesuaikan dengan kolom database
-    btn.onclick = () => window.open(button.url, "_blank");
-    buttonContainer.appendChild(btn);
+// Fungsi untuk konversi file ke base64 dengan buffer
+async function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      // Konversi ArrayBuffer ke base64
+      const base64String = btoa(
+        new Uint8Array(reader.result).reduce(
+          (data, byte) => data + String.fromCharCode(byte),
+          ""
+        )
+      );
+      resolve(base64String);
+    };
+    reader.onerror = reject;
+    reader.readAsArrayBuffer(file);
   });
 }
 
-// Panggil fetchLinktreeData saat halaman dimuat
-document.addEventListener("DOMContentLoaded", fetchLinktreeData);
+async function collectDesignData() {
+  try {
+    // Tambahkan pengecekan elemen
+    const titleInput = document.getElementById("titleInput");
+    const bioInput = document.getElementById("bioInput");
+    const previewContent = document.getElementById("previewContent");
+    const previewLinks = document.querySelector(".preview-link");
 
-// const urlParams = new URLSearchParams(window.location.search);
-// const id = urlParams.get("id"); // Ambil ID dari URL
+    const profileImageInput = document.getElementById("profileImageInput");
+    // Profile Image Handling
+    let profileImageBase64 = null;
+
+    // Priority:
+    // 1. Newly uploaded file
+    // 2. Previously stored base64 image
+    // 3. Current profile image
+    if (profileImageInput && profileImageInput.files.length > 0) {
+      const file = profileImageInput.files[0];
+      profileImageBase64 = await fileToBase64(file);
+    } else if (window.currentProfileImageBase64) {
+      profileImageBase64 = window.currentProfileImageBase64;
+    } else if (currentProfileImage) {
+      profileImageBase64 = currentProfileImage;
+    }
+
+    if (!titleInput || !bioInput || !previewContent) {
+      throw new Error("Required design elements not found");
+    }
+
+    // Background data collection
+    let backgroundData = {};
+    const gradientColor1 = document.getElementById("gradientColor1");
+    const gradientColor2 = document.getElementById("gradientColor2");
+    const solidColor = document.getElementById("solidColor");
+
+    if (previewContent.style.backgroundImage) {
+      const selectedBgUrl = previewContent.style.backgroundImage.replace(
+        /url\(['"](.+)['"]\)/,
+        "$1"
+      );
+
+      backgroundData = {
+        type: "background-image",
+        value: selectedBgUrl,
+      };
+    } else if (previewContent.style.background.includes("gradient")) {
+      backgroundData = {
+        type: "gradient-color",
+        value: {
+          color1: gradientColor1 ? gradientColor1.value : "#4158d0",
+          color2: gradientColor2 ? gradientColor2.value : "#c850c0",
+        },
+      };
+    } else {
+      backgroundData = {
+        type: "solid-color",
+        value: solidColor ? solidColor.value : "#3498db",
+      };
+    }
+
+    // Button style collection
+    const activeButtonStyle = document.querySelector(".block-shape.active");
+    const buttonStyleValue = activeButtonStyle
+      ? activeButtonStyle.getAttribute("data-style") || "standard"
+      : "standard";
+
+    // Button color collection
+    const buttonColor = previewLinks
+      ? previewLinks.style.backgroundColor || "#007bff"
+      : "#007bff";
+
+    // Font collection
+    const activeFontOption = document.querySelector(".font-option.active");
+    const fontFamily = activeFontOption
+      ? activeFontOption.textContent
+      : "Inter";
+
+    const designData = {
+      title: titleInput.value || "",
+      bio: bioInput.value || "",
+      style: {
+        profileImage: profileImageBase64,
+        theme: {
+          // Changed from background to theme
+          type: activeThemeType,
+          value: themeValue[activeThemeType],
+        },
+        buttonStyle: {
+          shape: buttonStyleValue,
+          color: buttonColor,
+        },
+        font: {
+          family: fontFamily,
+          color: document.querySelector("#fontColorPicker").value || "#000000", // Add font color
+        },
+      },
+    };
+
+    return designData;
+  } catch (error) {
+    console.error("Error collecting design data:", error);
+    throw error;
+  }
+}
+
+// Tambahkan fungsi pendukung jika belum ada
+async function urlToBase64(url) {
+  try {
+    const response = await fetch(url);
+    const blob = await response.blob();
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64String = reader.result.split(",")[1];
+        resolve(base64String);
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+  } catch (error) {
+    console.error("Error converting URL to base64:", error);
+    return null;
+  }
+}
+// Tambahkan event listener untuk menyimpan perubahan
+document.addEventListener("DOMContentLoaded", () => {
+  const saveButton = document.getElementById("saveChangesButton"); // Pastikan ada tombol dengan ID ini di HTML
+  if (saveButton) {
+    saveButton.addEventListener("click", saveChanges);
+  }
+});
