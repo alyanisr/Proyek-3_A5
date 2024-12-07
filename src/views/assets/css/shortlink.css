@@ -8,22 +8,15 @@
   margin: 0;
   padding: 0;
   box-sizing: border-box;
-  outline: none;
-  border: none;
-  text-decoration: none;
-}
-
-/* Global Styles */
-html {
-  scroll-behavior: smooth;
 }
 
 body {
   font-family: "Inter", sans-serif;
-  display: flex;
-  min-height: 100vh;
-  background-color: #f0f0f0;
+  background-color: #f5f7fb;
+  color: #1a1a1a;
+  line-height: 1.6;
 }
+
 
 /* Sidebar */
 .sidebar {
@@ -115,7 +108,16 @@ body {
   padding: 0.5rem;
   border-radius: 50%;
   cursor: pointer;
+  display: inline-block; /* Agar ikon di dalamnya sejajar */
+  align-items: center;
+  justify-content: center;
 }
+
+/* .chevron-down-icon {
+  font-size: 1.2rem;
+  margin-left: 8px;
+  cursor: pointer; 
+} */
 
 .dropdown {
   display: none;
