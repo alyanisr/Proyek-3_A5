@@ -68,7 +68,7 @@ async function fetchShortlink() {
 
 // Event Listeners
 copyShortUrlBtn.addEventListener("click", async () => {
-  const shortUrl = document.getElementById("shortlink-title").textContent;
+  const shortUrl = document.getElementById("shortlink-short-url").textContent;
   try {
     await navigator.clipboard.writeText(shortUrl);
     alert("Short URL copied to clipboard!");
