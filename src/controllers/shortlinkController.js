@@ -34,7 +34,7 @@ const createSl = async (req, res) => {
 
 const updateSl = async (req, res) => {
   try {
-    const { oldUrl, custom } = req.body; // Ambil custom dan title dari req.body
+    const { oldUrl, title, custom } = req.body; // Ambil custom dan title dari req.body
 
     // Cek apakah shortlink dengan original_url ada
     const result = await Shortlink.getBy("short_url", oldUrl);
@@ -64,7 +64,7 @@ const updateSl = async (req, res) => {
     }
 
     // Update shortlink
-    await Shortlink.patch(custom, oldUrl);
+    await Shortlink.patch(title, custom, oldUrl);
     res.status(200).send({
       msg: "Shortlink updated successfully",
     });

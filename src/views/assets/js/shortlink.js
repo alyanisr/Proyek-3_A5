@@ -43,7 +43,7 @@ document
   });
 
   function generateQRCode() {
-    const urlInputElement = document.getElementById("url-input");
+    const urlInputElement = document.getElementById("short-url-input");
     const titleInputElement = document.getElementById("title-input");
     const downloadButton = document.getElementById("download-btn");
     const copyButton = document.getElementById("copy-btn");
@@ -275,11 +275,13 @@ let currentEditingItem = null;
 function openEditModal(element) {
   const historyItem = element.closest(".history-item");
   const currentUrl = historyItem.querySelector(".shortUrl").textContent;
+  const currentTitle = historyItem.querySelector(".linkTitle").textContent;
 
   // Store reference to currently editing item
   currentEditingItem = historyItem;
 
   // Set current URL in form
+  document.getElementById("title").value = currentTitle;
   document.getElementById("oldUrl").value = currentUrl;
   document.getElementById("newUrl").value = currentUrl.replace(`${window.location.origin}/`, "");
 
@@ -297,12 +299,13 @@ function closeModal() {
 
 // Function to save changes
 async function saveChanges() {
+  const title = document.getElementById("title").value;
   let oldUrl = document.getElementById("oldUrl").value; // Ambil nilai oldUrl
   oldUrl = oldUrl.replace(`${window.location.origin}/`, "");
   const newUrl = document.getElementById("newUrl").value;
 
-  if (newUrl.trim() === "") {
-    alert("Please enter a new URL");
+  if (title.trim() === "" || newUrl.trim() === "") {
+    alert("Please enter a new title or a new URL");
     return;
   }
     // Send PATCH request to backend
@@ -311,7 +314,7 @@ async function saveChanges() {
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ oldUrl, custom: newUrl }),
+      body: JSON.stringify({ oldUrl, title, custom: newUrl }),
     });
 
     const result = await response.json();
@@ -320,13 +323,14 @@ async function saveChanges() {
       // Update URL and title in history item
       if (currentEditingItem) {
         const linkElement = currentEditingItem.querySelector(".shortUrl");
-
+        linkElement.textContent = title;
         linkElement.textContent = `${window.location.origin}/${newUrl}`;
         linkElement.href = `${window.location.origin}/${newUrl}`;
       }
 
       alert(result.msg);
       closeModal(); // Close modal on success
+      renderShortlinkHistory();
     } else {
       // Show error message from server
       alert(result.msg || "Failed to update shortlink");

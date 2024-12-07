@@ -21,13 +21,14 @@ Shortlink.update = async (field, value, fieldCriteria, valueCriteria) => {
   return await pool.query(sql, [value, valueCriteria]);
 };
 
-Shortlink.patch = async (custom, oldUrl) => {
+Shortlink.patch = async (title, custom, oldUrl) => {
     return pool.query(
       `UPDATE shortlinks 
-       SET short_url = $1, 
-           time_shortlink_last_updated = CURRENT_TIMESTAMP 
-       WHERE short_url = $2`,
-      [custom, oldUrl]
+       SET 
+        title = $1, short_url = $2, 
+        time_shortlink_last_updated = CURRENT_TIMESTAMP 
+       WHERE short_url = $3`,
+      [title, custom, oldUrl]
     );
   };
 
