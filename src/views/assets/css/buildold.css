@@ -1,0 +1,275 @@
+.preview-phone {
+  width: 280px;
+  height: 560px;
+  border: 12px solid #000;
+  border-radius: 30px;
+  overflow: hidden;
+  position: fixed;
+  right: 20px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.preview-content {
+  height: 100%;
+  background: linear-gradient(to bottom, #4158d0, #c850c0);
+}
+
+.preview-link {
+  display: block;
+  background: rgba(255, 255, 255, 0.9);
+  color: #333;
+  text-decoration: none;
+  padding: 12px 20px;
+  border-radius: 8px;
+  margin-bottom: 10px;
+  transition: transform 0.2s, background 0.2s;
+}
+
+.preview-link:hover {
+  transform: translateY(-2px);
+  background: white;
+}
+
+.sidebar {
+  width: 60px;
+  background: #f8f9fa;
+  height: 100vh;
+  position: fixed;
+  left: 0;
+  top: 0;
+  padding-top: 20px;
+}
+
+.main-content {
+  margin-left: 60px;
+  padding: 20px;
+}
+
+.nav-pills .nav-link.active {
+  background-color: #0d6efd;
+}
+
+.save-changes-btn {
+  position: fixed;
+  top: 10px;
+  right: 20px;
+  padding: 10px 20px;
+  background-color: #4caf50;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 16px;
+}
+.save-changes-btn:hover {
+  background-color: #45a049;
+}
+
+/*design*/
+.profile-section {
+  display: flex;
+  align-items: flex-start;
+  margin-bottom: 30px;
+}
+
+.profile-image-container {
+  width: 140px;
+  height: 140px;
+  position: relative;
+  margin-right: 20px;
+}
+
+.profile-info {
+  flex: 1;
+  padding-top: 20px;
+}
+
+.profile-image {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 3px solid #fff;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.profile-image-placeholder {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  border: 2px dashed #8b3dff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #f8f9fa;
+  cursor: pointer;
+}
+
+.profile-image-button {
+  width: 100%;
+  padding: 12px;
+  border-radius: 50px;
+  background-color: #8b3dff;
+  color: white;
+  border: none;
+  margin-top: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.profile-image-button:hover {
+  background-color: #7a35e0;
+}
+
+.preview-profile-image {
+  width: 80px;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  border: 3px solid #fff;
+  margin: 0 auto 12px;
+  object-fit: cover;
+  overflow: hidden; /* Memastikan bagian di luar lingkaran tersembunyi */
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.cropper-container {
+  width: 100%;
+  max-height: 400px;
+}
+
+.theme-option {
+  width: 120px;
+  height: 160px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.theme-option:hover {
+  transform: scale(1.05);
+}
+
+.color-circle {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  cursor: pointer;
+  margin: 5px;
+}
+
+.font-option {
+  padding: 10px 20px;
+  margin: 5px;
+  cursor: pointer;
+  border: 1px solid #dee2e6;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.font-option:hover {
+  background-color: #f8f9fa;
+}
+
+.font-option.active {
+  background-color: #e9ecef;
+  border-color: #0d6efd;
+}
+
+#previewBio {
+  font-size: 0.9rem;
+  opacity: 0.9;
+  max-width: 280px;
+  margin: 0 auto;
+}
+
+.btn-custom {
+  padding: 8px 16px;
+  background-color: #007bff;
+  border: none;
+  border-radius: 25px;
+  color: white;
+  transition: background-color 0.3s;
+}
+
+.btn-custom:hover {
+  background-color: #0056b3;
+}
+
+/* Button Style Options */
+.block-shape {
+  padding: 10px 20px;
+  margin: 5px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.block-shape.active {
+  background-color: #e9ecef;
+  border-color: #0d6efd;
+}
+
+.font-option.active {
+  background-color: #e9ecef;
+  border-radius: 4px;
+}
+
+.background-image-option {
+  width: 80px;
+  height: 60px;
+  margin: 0.5rem;
+  overflow: hidden;
+  cursor: pointer;
+  border: 2px solid transparent;
+  transition: all 0.3s ease;
+  border-radius: 8px;
+}
+
+.background-image-option:hover {
+  transform: scale(1.05);
+  border-color: #007bff;
+}
+
+.background-image-option img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 6px;
+}
+
+/* Responsivitas untuk preview content */
+#previewContent {
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  width: 100%;
+  min-height: 500px;
+  max-height: 700px;
+  transition: background-image 0.3s ease;
+}
+
+/* Media query untuk responsivitas */
+@media (max-width: 768px) {
+  .background-image-option {
+    width: 60px;
+    height: 45px;
+  }
+
+  #previewContent {
+    min-height: 300px;
+    max-height: 500px;
+  }
+}
+
+@media (max-width: 480px) {
+  .background-image-option {
+    width: 50px;
+    height: 40px;
+  }
+
+  #previewContent {
+    min-height: 250px;
+    max-height: 400px;
+  }
+}
