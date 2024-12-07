@@ -10,7 +10,20 @@ import { shorten } from './shortlinkController.js';
 const generateQRCode = async (req, res) => {
   try {
     const { url, title, color } = req.body;
-    const logo = req.file;
+    
+    // Define logo based on uploaded file or existing image data
+    let logo;
+    if (req.file) {
+      logo = req.file;
+    } else if (req.body.logo) {
+      // If logo is sent as base64 string in the body
+      const base64Data = req.body.logo.replace(/^data:image\/\w+;base64,/, '');
+      logo = {
+        buffer: Buffer.from(base64Data, 'base64'),
+        mimetype: 'image/png' // You might want to dynamically determine this
+      };
+    }
+
     if (!url || !title) {
       return res.status(400).json({ error: 'Please provide both URL and title' });
     }
@@ -25,30 +38,28 @@ const generateQRCode = async (req, res) => {
       width: 300,  // Set specific width
       margin: 0,
     });
-
-    let finalImage = sharp(qrCodeBuffer).resize(300, 300);
-
-    let logoDataURI = null;
     
-      const logoBuffer1 = await sharp(path.join(__dirname,'src','qrstyle', 'jtk.png'))
-        .resize(50,50)
-        .toBuffer();
+    let finalImage = sharp(qrCodeBuffer).resize(300, 300);
+    
+    const logoBuffer1 = await sharp(path.join(__dirname,'src','qrstyle', 'jtk.png'))
+      .resize(50,50)
+      .toBuffer();
   
-      const bglogo1 = await sharp(path.join(__dirname,'src','qrstyle', 'blank.jpg'))
-        .resize(60,60)
-        .toBuffer();
+    const bglogo1 = await sharp(path.join(__dirname,'src','qrstyle', 'blank.jpg'))
+      .resize(60,60)
+      .toBuffer();
   
-      const logoBufferbg = await sharp(path.join(__dirname,'src','qrstyle','blank.jpg'))
-        .resize(60, 60)
-        .toBuffer();
+    const logoBufferbg = await sharp(path.join(__dirname,'src','qrstyle','blank.jpg'))
+      .resize(60, 60)
+      .toBuffer();
 
-      // Composite both images onto the QR code in the center
-      finalImage = finalImage.composite([
-        { input: bglogo1, gravity: 'southeast' },
-        { input: logoBuffer1, gravity: 'southeast' },
-          ]);
+    // Composite default images onto the QR code
+    finalImage = finalImage.composite([
+      { input: bglogo1, gravity: 'southeast' },
+      { input: logoBuffer1, gravity: 'southeast' },
+    ]);
 
-          
+    let logoDataURI; 
     // If logo is provided, overlay it on the QR code
     if (logo) {
       const logoBuffer = await sharp(logo.buffer)
@@ -65,11 +76,13 @@ const generateQRCode = async (req, res) => {
       // Convert logoBuffer to Base64 Data URI
       const base64Logo = logoBuffer.toString('base64');
       logoDataURI = `data:image/png;base64,${base64Logo}`; // Create Data URI for logo
+    } else {
+      // If no logo, set logoDataURI to the existing image data or null
+      logoDataURI = null;    
     }
 
     const outputBuffer = await finalImage.png().toBuffer();
 
-    
     // Convert buffer to base64
     const base64Image = outputBuffer.toString('base64');
     const dataURI = `data:image/png;base64,${base64Image}`;

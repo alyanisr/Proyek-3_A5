@@ -279,8 +279,8 @@ async function editHistoryQR(button) {
 
     // Convert base64 logo to File object if it exists
     if (logoDataURI) {
-      const logoFile = await base64ToFile(logoDataURI, "logo.png");
-      formData.append("logo", logoFile);
+      
+      formData.append("logo", logoDataURI);
     }
 
     // Generate QR code
