@@ -45,7 +45,7 @@ const createRoom = async (req, res) => {
     if (
       (await Shortlink.exists("short_url", body.customUrl)).rows[0]["exists"]
     ) {
-      res.status(400).send({
+      res.status(409).send({
         msg: "Custom URL sudah digunakan!",
       });
       return;
