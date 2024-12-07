@@ -346,87 +346,12 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("solidColor").value = "#3498db";
 });
 
-// Ambil Linktree ID dari localStorage atau URL
-function getLinktreeId() {
-  const urlParams = new URLSearchParams(window.location.search);
-  const id = urlParams.get("id");
-
-  if (!id) {
-    console.error("Linktree ID tidak ditemukan di URL!");
-    alert("Invalid Linktree ID. Please check the URL.");
-  }
-
-  return id;
-}
-
-// Global variables to store button data and linktree ID
-let buttonData = [];
-let currentLinktreeId = getLinktreeId();
-
-// Listen for button data from buildold.js
-window.addEventListener("buttonDataReceived", (event) => {
-  buttonData = event.detail.buttonData;
-  currentLinktreeId = event.detail.linktreeId;
-  console.log("Received Button Data:", buttonData);
-});
-
-async function saveChanges() {
-  try {
-    // Validate currentLinktreeId
-    if (!currentLinktreeId) {
-      throw new Error("Linktree ID tidak ditemukan!");
-    }
-
-    // Validate designData collection
-    const designData = await collectDesignData();
-    if (!designData) {
-      throw new Error("Gagal mengumpulkan data desain!");
-    }
-
-    // Prepare data for sending
-    const jsonData = {
-      title: designData.title || "",
-      bio: designData.bio || "",
-      style: {
-        ...designData.style,
-        profileImage: designData.style.profileImage || null,
-        background: designData.style.background || {},
-      },
-      btnArray: buttonData || [], // Ensure btnArray is always an array
-    };
-
-    const response = await fetch(
-      `http://localhost:8000/linktree/save?id=${currentLinktreeId}`,
-      {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(jsonData),
-      }
-    );
-
-    if (!response.ok) {
-      // Try to get more details about the error
-      const errorText = await response.text();
-      throw new Error(
-        `HTTP error! status: ${response.status}, message: ${errorText}`
-      );
-    }
-
-    alert("Perubahan berhasil disimpan!");
-  } catch (error) {
-    console.error("Detailed error:", error);
-    alert(`Terjadi kesalahan: ${error.message}`);
-  }
-}
-
-// Fungsi untuk konversi file ke base64 dengan buffer
-async function fileToBase64(file) {
+// Function to convert file to base64 directly
+function fileToBase64(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => {
-      // Konversi ArrayBuffer ke base64
+      // Convert ArrayBuffer to base64
       const base64String = btoa(
         new Uint8Array(reader.result).reduce(
           (data, byte) => data + String.fromCharCode(byte),
@@ -440,95 +365,7 @@ async function fileToBase64(file) {
   });
 }
 
-async function collectDesignData() {
-  try {
-    // Pastikan elemen-elemen yang dibutuhkan ada
-    const titleInput = document.getElementById("titleInput");
-    const bioInput = document.getElementById("bioInput");
-    const previewContent = document.getElementById("previewContent");
-
-    if (!titleInput || !bioInput || !previewContent) {
-      throw new Error("Beberapa elemen input tidak ditemukan!");
-    }
-
-    // Collect background data
-    let backgroundData = {};
-    const gradientColor1 = document.getElementById("gradientColor1");
-    const gradientColor2 = document.getElementById("gradientColor2");
-    const solidColor = document.getElementById("solidColor");
-
-    if (previewContent.style.backgroundImage) {
-      // Jika background adalah gambar
-      const selectedBgUrl = previewContent.style.backgroundImage.replace(
-        /url\(['"](.+)['"]\)/,
-        "$1"
-      );
-
-      try {
-        const base64BackgroundImage = await urlToBase64(selectedBgUrl);
-        backgroundData = {
-          type: "image",
-          value: base64BackgroundImage,
-        };
-      } catch (error) {
-        console.error("Error converting background image:", error);
-        backgroundData = {
-          type: "image",
-          value: null,
-        };
-      }
-    } else if (previewContent.style.background.includes("gradient")) {
-      // Jika background adalah gradient
-      backgroundData = {
-        type: "gradient",
-        value: {
-          color1: gradientColor1 ? gradientColor1.value : "#4158d0",
-          color2: gradientColor2 ? gradientColor2.value : "#c850c0",
-        },
-      };
-    } else {
-      // Jika background adalah warna solid
-      backgroundData = {
-        type: "solid",
-        value: solidColor ? solidColor.value : "#3498db",
-      };
-    }
-
-    // Collect design data
-    const designData = {
-      title: titleInput.value || "",
-      bio: bioInput.value || "",
-      style: {
-        profileImage: window.currentProfileImageBase64 || null,
-        background: backgroundData,
-        buttonStyle: {
-          shape:
-            document
-              .querySelector(".block-shape.active")
-              ?.getAttribute("data-style") || "standard",
-          color:
-            document.getElementById("buttonColorPicker").value
-              ?.backgroundColor || "#007bff",
-        },
-        font: {
-          family:
-            document.querySelector(".font-option.active")?.textContent ||
-            "Inter",
-          color:
-            document.getElementById("fontColorPicker").value
-              ?.color || "#000000",
-        },
-      },
-    };
-
-    return designData;
-  } catch (error) {
-    console.error("Error collecting design data:", error);
-    throw error;
-  }
-}
-
-// Tambahkan fungsi pendukung jika belum ada
+// Function to convert URL to base64
 async function urlToBase64(url) {
   try {
     const response = await fetch(url);
@@ -536,6 +373,7 @@ async function urlToBase64(url) {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.onloadend = () => {
+        // Remove data URL prefix if present
         const base64String = reader.result.split(",")[1];
         resolve(base64String);
       };
@@ -547,10 +385,100 @@ async function urlToBase64(url) {
     return null;
   }
 }
-// Tambahkan event listener untuk menyimpan perubahan
-document.addEventListener("DOMContentLoaded", () => {
-  const saveButton = document.getElementById("saveChangesButton"); // Pastikan ada tombol dengan ID ini di HTML
-  if (saveButton) {
-    saveButton.addEventListener("click", saveChanges);
+
+// Updated handleImageUpload for profile image
+async function handleImageUpload(e) {
+  const file = e.target.files[0];
+  if (file) {
+    try {
+      // Convert file directly to base64
+      const base64Image = await fileToBase64(file);
+
+      // Save base64 image for later use
+      window.currentProfileImageBase64 = base64Image;
+
+      // Still show preview using URL.createObjectURL
+      const previewUrl = URL.createObjectURL(file);
+      updateProfileImage(previewUrl);
+
+      sendDesignData();
+      bootstrap.Modal.getInstance(
+        document.getElementById("imageOptionsModal")
+      ).hide();
+    } catch (error) {
+      console.error("Error processing profile image:", error);
+      alert("Error processing image. Please try again.");
+    }
   }
-});
+}
+
+// Updated collectDesignData function
+async function collectDesignData() {
+  // Get background type and values
+  const previewContent = document.getElementById("previewContent");
+  let backgroundData = {};
+
+  // Handle background image
+  if (previewContent.style.backgroundImage) {
+    // Get selected background image URL from the static options
+    const selectedBgUrl = previewContent.style.backgroundImage.replace(
+      /url\(['"](.+)['"]\)/,
+      "$1"
+    );
+
+    try {
+      // Convert background image to base64
+      const base64BackgroundImage = await urlToBase64(selectedBgUrl);
+
+      backgroundData = {
+        type: "image",
+        value: base64BackgroundImage,
+      };
+    } catch (error) {
+      console.error("Error converting background image:", error);
+      backgroundData = {
+        type: "image",
+        value: null,
+      };
+    }
+  } else if (previewContent.style.background.includes("gradient")) {
+    backgroundData = {
+      type: "gradient",
+      value: {
+        color1: document.getElementById("gradientColor1").value,
+        color2: document.getElementById("gradientColor2").value,
+      },
+    };
+  } else {
+    backgroundData = {
+      type: "solid",
+      value: document.getElementById("solidColor").value,
+    };
+  }
+
+  // Collect all design data
+  const designData = {
+    title: titleInput.value,
+    bio: bioInput.value,
+    style: {
+      profileImage: window.currentProfileImageBase64 || null,
+      background: backgroundData,
+      buttonStyle: {
+        shape:
+          document
+            .querySelector(".block-shape.active")
+            ?.getAttribute("data-style") || "standard",
+        color: getComputedStyle(document.querySelector(".preview-link"))
+          .backgroundColor,
+      },
+      font: {
+        family:
+          document.querySelector(".font-option.active")?.textContent || "Inter",
+        color: getComputedStyle(document.getElementById("previewUsername"))
+          .color,
+      },
+    },
+  };
+
+  return designData;
+}
