@@ -155,34 +155,59 @@
 
           // Prepare data to send as JSON
           const data = {
-            email: email,
-            password: password,
-          };
+    email: email,
+    password: password,
+};
 
-          // Send data to backend as JSON
-          fetch("/account/send", {
+fetch("/account/check", {
+    method: "POST",
+    headers: {
+        "Content-Type": "application/json",
+    },
+    body: JSON.stringify(data),
+})
+.then((response) => {
+    if (!response.ok) {
+        throw new Error("Network response was not ok");
+    }
+    return response.json();
+})
+.then((result) => {
+    if (result.exists) {
+        alert('Email sudah di aktivasi');
+    } else {
+        // If email doesn't exist, send activation request
+        return fetch("/account/send", {
             method: "POST",
             headers: {
-              "Content-Type": "application/json",
+                "Content-Type": "application/json",
             },
-            body: JSON.stringify(data), // Convert data to JSON string
-          })
-            .then((response) => {
-              if (response.redirected) {
-                // If the response is redirected, follow the redirect
-                window.location.href = response.url;
-              } else {
-                return response.json(); // Process the JSON response
-              }
-            })
-            .then((data) => {
-              // Handle success if not redirected
-              console.log("Success:", data);
-            })
-            .catch((error) => {
-              console.error("Error:", error);
-              alert("Terjadi kesalahan saat mengirim data.");
-            });
+            body: JSON.stringify(data),
+        });
+    }
+})
+.then((response) => {
+    if (response) {
+        if (response.redirected) {
+            // If the response is redirected, follow the redirect
+            window.location.href = response.url;
+        } else {
+            return response.json(); // Process the JSON response
+        }
+    }
+})
+.then((data) => {
+    // Handle success if not redirected
+    if (data) {
+        console.log("Success:", data);
+    }
+})
+.catch((error) => {
+    console.error("There was a problem with the fetch operation:", error);
+    alert("Terjadi kesalahan saat mengirim data.");
+});
+          // Send data to backend as JSON
+          
         });
     </script>
   </body>
