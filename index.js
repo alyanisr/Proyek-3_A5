@@ -35,7 +35,7 @@ app.use('/account', routerAccount);
 
 app.use('/qr',loginSession, routerQr);
 
-app.use('/linktree',  routerLinktree);
+app.use('/linktree', loginSession, routerLinktree);
 
 app.use('/tes',routerext);
 
