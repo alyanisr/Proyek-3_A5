@@ -11,4 +11,15 @@ account.emails = async (email) =>{
             return await pool.query(`SELECT password FROM accounts WHERE email = $1`, [email]);
 }
 
+account.exist = async(email) =>{
+    const query = `
+      SELECT EXISTS(
+        SELECT 1 FROM accounts
+        WHERE email = $1
+      )
+    `;
+    return await pool.query(query, [email]);
+}
+
+
 export default account;

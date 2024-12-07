@@ -271,6 +271,19 @@ const logout = async(req,res) => {
     })
 }
 
+const check_exist = async (req, res) => {
+    try {
+        const { email } = req.body;
+        const result = await account.exist(email); 
+        const exists = result.rows[0].exists; 
+
+        return res.status(200).json({ exists });
+    } catch (error) {
+        console.error(error); 
+        return res.status(500).json({ message: "An error occurred", error }); 
+    }
+};
+
 export default{
     sendVerificationEmail,
     kirim_otp,
@@ -283,5 +296,6 @@ export default{
     logon,
     forgpass,
     lgcforgpass,
-    logout
+    logout,
+    check_exist
 }
