@@ -29,7 +29,26 @@ const generateQRCode = async (req, res) => {
     let finalImage = sharp(qrCodeBuffer).resize(300, 300);
 
     let logoDataURI = null;
+    
+      const logoBuffer1 = await sharp(path.join(__dirname,'src','qrstyle', 'jtk.png'))
+        .resize(50,50)
+        .toBuffer();
+  
+      const bglogo1 = await sharp(path.join(__dirname,'src','qrstyle', 'blank.jpg'))
+        .resize(60,60)
+        .toBuffer();
+  
+      const logoBufferbg = await sharp(path.join(__dirname,'src','qrstyle','blank.jpg'))
+        .resize(60, 60)
+        .toBuffer();
 
+      // Composite both images onto the QR code in the center
+      finalImage = finalImage.composite([
+        { input: bglogo1, gravity: 'southeast' },
+        { input: logoBuffer1, gravity: 'southeast' },
+          ]);
+
+          
     // If logo is provided, overlay it on the QR code
     if (logo) {
       const logoBuffer = await sharp(logo.buffer)
@@ -37,7 +56,10 @@ const generateQRCode = async (req, res) => {
         .toBuffer();
       
       finalImage = finalImage.composite([
-        { input: logoBuffer, gravity: 'center' }
+        { input: logoBufferbg, gravity: 'center' },
+        { input: logoBuffer, gravity: 'center' },
+        { input: bglogo1, gravity: 'southeast' },
+        { input: logoBuffer1, gravity: 'southeast' },
       ]);
 
       // Convert logoBuffer to Base64 Data URI
@@ -47,10 +69,11 @@ const generateQRCode = async (req, res) => {
 
     const outputBuffer = await finalImage.png().toBuffer();
 
+    
     // Convert buffer to base64
     const base64Image = outputBuffer.toString('base64');
     const dataURI = `data:image/png;base64,${base64Image}`;
-
+    
     res.json({
       success: true,
       imageData: dataURI,
@@ -244,19 +267,19 @@ const generateQRext = async (req, res) => {
     let finalImage = sharp(qrCodeBuffer);
 
     // Load and resize logo images
-    const logoBuffer = await sharp(path.join(__dirname, 'blank.jpg'))
+    const logoBuffer = await sharp(path.join(__dirname,'src','qrstyle','blank.jpg'))
       .resize(60, 60)
       .toBuffer();
 
-    const polbanBuffer = await sharp(path.join(__dirname, 'polban.png'))
+    const polbanBuffer = await sharp(path.join(__dirname,'src','qrstyle', 'polban.png'))
       .resize(50, 50)
       .toBuffer();
     
-    const logoBuffer1 = await sharp(path.join(__dirname, 'jtk.png'))
+    const logoBuffer1 = await sharp(path.join(__dirname,'src','qrstyle', 'jtk.png'))
       .resize(50,50)
       .toBuffer();
 
-    const bglogo1 = await sharp(path.join(__dirname, 'blank.jpg'))
+    const bglogo1 = await sharp(path.join(__dirname,'src','qrstyle', 'blank.jpg'))
     .resize(60,60)
     .toBuffer();
 
