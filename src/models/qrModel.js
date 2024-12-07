@@ -33,4 +33,8 @@ Qr.checkOwner = async(id_qr, email) =>{
     return await pool.query(query, [id_qr, email]);
 }
 
+Qr.Update = async (style,id_qr) => {
+    return await pool.query('UPDATE qr_codes SET style = $1 WHERE id_qr = $2',[style,id_qr])
+}
+
 export default Qr;

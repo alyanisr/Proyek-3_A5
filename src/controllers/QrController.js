@@ -354,6 +354,21 @@ const getqrext = async (req, res) => {
   }
 };
 
+const updateqr = async (req,res) => {
+  try {
+    const { id } = req.params;
+    const { style } = req.body;
+    
+    Qr.Update(style,id);
+    
+    res.status(200).json({
+      success: true,
+      message: 'QR code updated successfully',
+    });
+  } catch (error) {
+    return error
+  }
+}
 
 export default{
     generateQRCode,
@@ -362,5 +377,6 @@ export default{
     pickQR,
     deleteQR,
     generateQRext,
-    getqrext
+    getqrext,
+    updateqr
 };
