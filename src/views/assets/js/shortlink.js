@@ -172,7 +172,7 @@ async function renderShortlinkHistory() {
       historyItem.innerHTML = `
         <i data-feather="link-2"></i>
         <div class="link-details">
-          <p class="linkTitle">${item.title || "No Title"}</p>
+          <p class="linkTitle">${item.shortlink_title || "No Title"}</p>
           <p class="shortUrl">${fullURL || "No shorts available"}</p>
           <p class="longUrl">${shortLongUrl}</p>
           <p><i data-feather="calendar"></i> ${item.time_shortlink_created}</p>

@@ -138,7 +138,7 @@ const getByID = async (req, res) => {
     } else {
       res.status(200).send({
         id_shortlink: result.rows[0]["id_shortlink"],
-        title: result.rows[0]["title"],
+        shortlink_title: result.rows[0]["shortlink_title"],
         long_url: result.rows[0]["long_url"],
         short_url: result.rows[0]["short_url"]
       });
