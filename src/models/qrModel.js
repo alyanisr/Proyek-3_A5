@@ -11,7 +11,7 @@ Qr.show = async(id) => {
 } 
 
 Qr.getid = async(email) => {
-    return await pool.query('SELECT id_qr FROM qr_codes WHERE email = $1', [email])
+    return await pool.query('SELECT id_qr FROM qr_codes WHERE email = $1 ORDER BY latest_update DESC', [email])
 }
 
 Qr.exists = async (field, value) => {
