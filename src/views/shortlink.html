@@ -84,7 +84,7 @@
               id="short-url-form"
             >
               <div class="input-group">
-                <label for="title-input">Destination URL</label>
+                <label for="title-input">Title</label>
                 <input
                   type="text"
                   id="title-input"
@@ -93,13 +93,22 @@
                 />
               </div>
               <div class="input-group">
-                <label for="url-input">Custom URL</label>
+                <label for="url-input">Destination URL</label>
+                <input
+                  type="text"
+                  id="url-input"
+                  name="url"
+                  placeholder="Enter your long URL..."
+                />
+              </div>
+              <div class="input-group">
+                <label for="short-url-input">Custom URL</label>
                 <div class="custom-url-container">
                   <span class="url-prefix">plb.sh/</span>
                   <input
                     type="text"
-                    id="url-input"
-                    name="url"
+                    id="short-url-input"
+                    name="short-url"
                     placeholder="custom-part"
                     class="custom-url-input"
                   />
@@ -161,25 +170,29 @@
     <script src="assets/js/shortlink.js"></script>
     <script>
       feather.replace(); // Initialize Feather icons
-
+    
       // Attach event listener for the Generate Short URL button
       document
         .getElementById("generate-btn")
         .addEventListener("click", function () {
-          const title = document.getElementById("title-input").value;
-          const url = document.getElementById("url-input").value;
-
-          // Ensure the user provided a valid destination URL
+          const title = document.getElementById("title-input").value; // Ambil input title
+          const url = document.getElementById("url-input").value; // Ambil input URL
+          const custom = document.getElementById("short-url-input").value; // Ambil custom URL
+    
+          // Validasi input
           if (!title || !url) {
-            alert("Please enter both a valid Title and Destination URL");
+            alert("Please enter a Title and a valid Destination URL");
             return;
           }
-
+    
+          // Data yang akan dikirim ke backend
           const data = {
-            destination: title,
-            custom: url, // Use the title as the custom URL
+            title,
+            destination: url,
+            custom,
           };
-
+    
+          // Kirim request ke backend
           fetch("http://localhost:8000/shortlink/config", {
             method: "POST",
             headers: {
@@ -189,24 +202,23 @@
           })
             .then((response) => {
               if (response.redirected) {
-                // If request is successful, redirect to the generate.html page
-                window.location.href = response.url; // Redirect to generate.html
+                // Redirect jika request berhasil
+                window.location.href = response.url;
               } else {
-                return response.json(); // Return JSON response to display errors
+                return response.json();
               }
             })
             .then((data) => {
               if (data) {
-                console.log("Success:", data);
-                // Display data or messages as needed
+                alert(data.msg); // Tampilkan pesan dari backend
               }
             })
             .catch((error) => {
               console.error("Error:", error);
-              // Display error if there's an issue
+              alert("Terjadi kesalahan saat membuat shortlink");
             });
         });
-    </script>
+    </script>    
   </body>
 </html>
 

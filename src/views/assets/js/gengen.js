@@ -36,23 +36,28 @@ function generateQRCode(url) {
 
 // Fetch shortlink data from the backend
 async function fetchShortlink() {
-  const id = getIdFromUrl();
+  const id = getIdFromUrl(); // Ambil ID dari URL (misal: ?id=1234)
   if (!id) {
     console.error("No ID found in URL");
     return;
   }
 
   try {
+    // Fetch data shortlink dari backend
     const response = await fetch(`http://localhost:8000/shortlink/get/${id}`);
     if (!response.ok) {
       throw new Error("Network response was not ok");
     }
     const data = await response.json();
-    const shortUrl = "http://localhost:8000/" + data.short_url;
+    const shortUrl = `${window.location.origin}/${data.short_url}`; // Bentuk full short URL
 
     // Update UI
-    document.getElementById("shortlink-title").textContent = shortUrl;
+    document.getElementById("shortlink-title").textContent = data.title;
+    document.getElementById("shortlink-short-url").textContent = shortUrl;
+    document.getElementById("shortlink-short-url").href = shortUrl; // Tambahkan link untuk short_url
     document.getElementById("shortlink-url").textContent = data.long_url;
+    document.getElementById("shortlink-url").href = data.long_url; // Tambahkan link untuk long_url
+    
 
     // Generate QR code
     generateQRCode(shortUrl);

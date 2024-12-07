@@ -483,6 +483,13 @@ body {
   margin: 5px 0;
 }
 
+.empty-history {
+  text-align: center;
+  font-size: 1.2rem;
+  color: #555;
+  margin-top: 20px;
+}
+
 .actions button {
   background-color: #4a90e2;
   color: #fff;

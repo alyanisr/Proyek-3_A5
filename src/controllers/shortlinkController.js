@@ -20,7 +20,8 @@ const createSl = async (req, res) => {
       } else {
         custom = body.custom;
       }
-      await Shortlink.insert(id, body.destination, custom, req.session.email, 'shortlink');
+      const title = body.title?.trim()
+      await Shortlink.insert(id, body.destination, custom, req.session.email, title, 'shortlink');
       res.status(303).redirect(`http://localhost:8000/shortlink/res?id=${id}`);
     }
   } catch (err) {
@@ -33,14 +34,14 @@ const createSl = async (req, res) => {
 
 const updateSl = async (req, res) => {
   try {
-    const { body } = req.body;
+    const { oldUrl, custom } = req.body; // Ambil custom dan title dari req.body
 
     // Cek apakah shortlink dengan original_url ada
-    const result = await Shortlink.getBy("short_url", body.custom);
+    const result = await Shortlink.getBy("short_url", oldUrl);
 
     if (result.rowCount === 0) {
       res.status(404).send({
-        msg: "Shortlink tidak ditemukan!"
+        msg: "Shortlink tidak ditemukan!",
       });
       return;
     }
@@ -48,26 +49,29 @@ const updateSl = async (req, res) => {
     // Pastikan user memiliki akses ke shortlink ini
     if (result.rows[0]["email"] !== req.session.email) {
       res.status(401).send({
-        msg: "Unauthorized"
+        msg: "Unauthorized",
       });
       return;
     }
 
-    // Pastikan new_url unik
-    if (!isCustomUnique(body.custom)) {
+    // Pastikan custom URL unik
+    const isUnique = await isCustomUnique(custom);
+    if (!isUnique) {
       res.status(409).send({
-        msg: "Custom URL sudah ada!"
+        msg: "Custom URL sudah ada!",
       });
       return;
     }
 
     // Update shortlink
-    await Shortlink.patch(body.custom, body.title);
-    res.status(200).send("Shortlink updated successfully");
+    await Shortlink.patch(custom, oldUrl);
+    res.status(200).send({
+      msg: "Shortlink updated successfully",
+    });
   } catch (err) {
     console.error("Terjadi error saat memperbarui shortlink:", err);
     res.status(500).send({
-      msg: "Terjadi kesalahan server"
+      msg: "Terjadi kesalahan server",
     });
   }
 };
@@ -133,6 +137,7 @@ const getByID = async (req, res) => {
     } else {
       res.status(200).send({
         id_shortlink: result.rows[0]["id_shortlink"],
+        title: result.rows[0]["title"],
         long_url: result.rows[0]["long_url"],
         short_url: result.rows[0]["short_url"]
       });

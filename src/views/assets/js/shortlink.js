@@ -172,7 +172,8 @@ async function renderShortlinkHistory() {
       historyItem.innerHTML = `
         <i data-feather="link-2"></i>
         <div class="link-details">
-          <p class="shortUrl">${fullURL || "No shorts available"} </p>
+          <p class="linkTitle">${item.title || "No Title"}</p>
+          <p class="shortUrl">${fullURL || "No shorts available"}</p>
           <p class="longUrl">${shortLongUrl}</p>
           <p><i data-feather="calendar"></i> ${item.time_shortlink_created}</p>
         </div>
@@ -185,11 +186,13 @@ async function renderShortlinkHistory() {
       `;
 
       historyContainer.appendChild(historyItem);
+      feather.replace(); // Untuk memperbarui ikon Feather
     });
-
-    feather.replace(); // Perbarui ikon Feather
   } catch (error) {
     console.error("Error fetching shortlink history:", error);
+    document.getElementById("History").innerHTML = `
+      <p class="empty-history">Tidak ada riwayat shortlink.</p>
+    `;
   }
 }
 
@@ -294,64 +297,41 @@ function closeModal() {
 
 // Function to save changes
 async function saveChanges() {
-  const originalUrl = document.getElementById("oldUrl").value;
+  let oldUrl = document.getElementById("oldUrl").value; // Ambil nilai oldUrl
+  oldUrl = oldUrl.replace(`${window.location.origin}/`, "");
   const newUrl = document.getElementById("newUrl").value;
 
   if (newUrl.trim() === "") {
     alert("Please enter a new URL");
     return;
   }
-
-  try {
-    // Kirim request PATCH ke backend
+    // Send PATCH request to backend
     const response = await fetch("/shortlink/config", {
       method: "PATCH",
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({
-        original_url: originalUrl.replace(`${window.location.origin}/`, ""),
-        new_url: newUrl,
-      }),
+      body: JSON.stringify({ oldUrl, custom: newUrl }),
     });
 
+    const result = await response.json();
+
     if (response.ok) {
-      // Update URL di frontend jika sukses
+      // Update URL and title in history item
       if (currentEditingItem) {
         const linkElement = currentEditingItem.querySelector(".shortUrl");
+
         linkElement.textContent = `${window.location.origin}/${newUrl}`;
         linkElement.href = `${window.location.origin}/${newUrl}`;
       }
 
-      alert("Shortlink successfully updated!");
+      alert(result.msg);
+      closeModal(); // Close modal on success
     } else {
-      const errorMessage = await response.text();
-      alert(`Error updating shortlink: ${errorMessage}`);
+      // Show error message from server
+      alert(result.msg || "Failed to update shortlink");
     }
-  } catch (error) {
-    console.error("Error updating shortlink:", error);
-    alert("An error occurred while updating the shortlink. Please try again.");
-  }
-
-  // Tutup modal
-  closeModal();
 }
-
-// Validasi tambahan pada newUrl di modal
-document.getElementById("newUrl").addEventListener("input", function () {
-  const input = this.value.trim();
-  const errorField = document.getElementById("error-message");
-
-  if (input.length < 4) {
-    errorField.textContent = "Shortlink must be at least 4 characters.";
-    errorField.style.color = "red";
-  } else if (!/^[a-zA-Z0-9_-]+$/.test(input)) {
-    errorField.textContent = "Shortlink contains invalid characters.";
-    errorField.style.color = "red";
-  } else {
-    errorField.textContent = "";
-  }
-});
 
 // Event listeners
 closeBtn.onclick = closeModal;
