@@ -11,6 +11,7 @@ import routerLinktree from "./src/routes/linktree.js";
 import { loginSession } from "./src/middleware/loginSessionMid.js";
 import { log } from "console";
 import routerext from "./src/routes/external.js";
+import landingPageRouter from "./src/routes/landingpage.js";
 
 const PORT = 8000;
 const app = express();
@@ -38,6 +39,7 @@ app.use('/linktree',  routerLinktree);
 
 app.use('/tes',routerext);
 
+app.use('/landingpage', landingPageRouter)
 
 app.listen(PORT, () => {
     console.log(`Server utama running at port ${PORT}`);

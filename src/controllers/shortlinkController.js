@@ -6,28 +6,26 @@ import path from "path";
 const createSl = async (req, res) => {
   try {
     const { body } = req;
-    //cek apakah custom url sudah ada
-    if (!(await isCustomUnique(body.custom))) {
+
+    // Cek apakah custom URL sudah ada
+    if (body.custom && !(await isCustomUnique(body.custom))) {
       res.status(409).send({
         msg: "Custom URL sudah ada!",
       });
       return;
-    } else {
-      const id = await uniqueRandomID();
-      let custom;
-      if (toString(body.custom).length === 0) {
-        custom = id;
-      } else {
-        custom = body.custom;
-      }
-      const title = body.title?.trim()
-      await Shortlink.insert(id, body.destination, custom, req.session.email, title, 'shortlink');
-      res.status(303).redirect(`http://localhost:8000/shortlink/res?id=${id}`);
     }
+
+    const id = await uniqueRandomID();
+    const custom = body.custom?.trim() || id;
+    const title = body.title?.trim();
+
+    await Shortlink.insert(id, body.destination, custom, req.session.email, title, "shortlink");
+
+    res.status(303).redirect(`http://localhost:8000/shortlink/res?id=${id}`);
   } catch (err) {
     console.error("Terjadi error saat membuat shortlink:", err);
     res.status(500).send({
-      msg: "Terjadi kesalahan server"
+      msg: "Terjadi kesalahan server",
     });
   }
 };
@@ -54,13 +52,16 @@ const updateSl = async (req, res) => {
       return;
     }
 
+    const existingShortlink = result.rows[0];
+    let updatedUrl = existingShortlink.short_url;
+
     // Pastikan custom URL unik
-    const isUnique = await isCustomUnique(custom);
-    if (!isUnique) {
-      res.status(409).send({
-        msg: "Custom URL sudah ada!",
-      });
-      return;
+    if (custom && custom !== existingShortlink.short_url) {
+      // Cek apakah `newUrl` unik
+      if (!(await isCustomUnique(custom))) {
+        return res.status(409).send({ msg: "Custom URL sudah ada!" });
+      }
+      updatedUrl = custom; // Update custom URL jika unik
     }
 
     // Update shortlink

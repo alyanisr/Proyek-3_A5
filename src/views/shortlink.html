@@ -101,22 +101,33 @@
                   placeholder="Enter your long URL..."
                 />
               </div>
-              <div class="input-group">
-                <label for="short-url-input">Custom URL</label>
-                <div class="custom-url-container">
-                  <span class="url-prefix">plb.sh/</span>
-                  <input
-                    type="text"
-                    id="short-url-input"
-                    name="short-url"
-                    placeholder="custom-part"
-                    class="custom-url-input"
-                  />
+              <button class="save-btn" id="generate-btn" type="button">
+                Generate
+              </button>
+
+              <div id="custom-section" style="display: none;">
+                <div class="input-group">
+                  <label for="custom-url-input">Custom URL (Optional)</label>
+                  <div class="custom-url-container">
+                    <span class="url-prefix">plb.sh/</span>
+                    <input
+                      type="text"
+                      id="custom-url-input"
+                      name="custom-url"
+                      placeholder="custom-part"
+                      class="custom-url-input"
+                    />
+                  </div>
+                </div>
+                <div class="button-group">
+                  <button class="save-btn" id="generate-without-custom-btn" type="button">
+                    Generate Without Custom URL
+                  </button>
+                  <button class="save-btn" id="generate-with-custom-btn" type="button">
+                    Generate With Custom URL
+                  </button>
                 </div>
               </div>
-              <button class="save-btn" id="generate-btn" type="button">
-                Generate Short URL
-              </button>
             </form>
             <div class="preview" id="qr-preview" style="display: none">
               <canvas id="qr-canvas" width="300" height="300"></canvas>
@@ -179,24 +190,58 @@
       document
         .getElementById("generate-btn")
         .addEventListener("click", function () {
-          const title = document.getElementById("title-input").value; // Ambil input title
-          const url = document.getElementById("url-input").value; // Ambil input URL
-          const custom = document.getElementById("short-url-input").value; // Ambil custom URL
-    
-          // Validasi input
+          const title = document.getElementById("title-input").value;
+          const url = document.getElementById("url-input").value;
+
           if (!title || !url) {
             alert("Please enter a Title and a valid Destination URL");
             return;
           }
-    
-          // Data yang akan dikirim ke backend
+
+          // Menampilkan bagian custom URL dan tombol tambahan
+          document.getElementById("custom-section").style.display = "block";
+          document.getElementById("generate-btn").style.display = "none";
+        });
+
+        document.getElementById("generate-without-custom-btn").addEventListener("click", function () {
+          const title = document.getElementById("title-input").value;
+          const url = document.getElementById("url-input").value;
+
+          // Validasi panjang title (misalkan maksimal 50 karakter)
+          if (title.length > 50) {
+            alert("Title cannot exceed 50 characters");
+            return;
+          }
+
+          const data = {
+            title,
+            destination: url,
+          };
+
+          sendRequest(data);
+        });
+
+        // Event listener untuk Generate With Custom URL
+        document.getElementById("generate-with-custom-btn").addEventListener("click", function () {
+          const title = document.getElementById("title-input").value;
+          const url = document.getElementById("url-input").value;
+          const custom = document.getElementById("custom-url-input").value;
+
+          if (!custom.trim()) {
+            alert("Masukkan Custom URL jika ingin generate dengan Custom URL.");
+            return;
+          }
+
           const data = {
             title,
             destination: url,
             custom,
           };
-    
-          // Kirim request ke backend
+
+          sendRequest(data);
+        });
+
+        function sendRequest(data) {
           fetch("http://localhost:8000/shortlink/config", {
             method: "POST",
             headers: {
@@ -214,14 +259,14 @@
             })
             .then((data) => {
               if (data) {
-                alert(data.msg); // Tampilkan pesan dari backend
+                alert(data.msg); // Tampilkan pesan error dari backend
               }
             })
             .catch((error) => {
               console.error("Error:", error);
               alert("Terjadi kesalahan saat membuat shortlink");
             });
-        });
+        }
     </script>    
   </body>
 </html>
