@@ -37,4 +37,8 @@ routerAccount.route('/forgot-password')
 
 routerAccount.route('/logout')
     .get(accountController.logout)
+
+routerAccount.route('/check')
+    .post(accountController.check_exist)
+
 export default routerAccount;

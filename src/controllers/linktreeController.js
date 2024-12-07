@@ -22,7 +22,7 @@ async function uniqueRandomID() {
     }
   }
   return id;
-}
+};
 
 const linktreeMenu = async (req, res) => {
   try {
@@ -45,7 +45,7 @@ const createRoom = async (req, res) => {
     if (
       (await Shortlink.exists("short_url", body.customUrl)).rows[0]["exists"]
     ) {
-      res.status(400).send({
+      res.status(409).send({
         msg: "Custom URL sudah digunakan!",
       });
       return;
@@ -109,6 +109,35 @@ const saveContent = async (req, res) => {
     });
   }
 };
+
+const editLinktreeURL = async (req, res) => {
+  try {
+    const { body } = req;
+    const id = req.query.id;
+    const result = await Linktree.getBy("id_linktree", id);
+
+    if (result.rowCount === 0) {
+      res.status(404).send({
+        msg: "Linktree tidak ditemukan!",
+      });
+      return;
+    }
+    // else if (result.rows[0]["email"] != req.session.email) {
+    //   res.status(403).send({
+    //     msg: "Forbidden"
+    //   });
+    //   return;
+    // };
+
+    await Linktree.update("linktree_url", body.url, "id_linktree", id);
+    res.status(200).send("success");
+  } catch (e) {
+    console.error("Terjadi error saat mengupdate URL link-in-bio:", e);
+    res.status(500).send({
+      msg: "Terjadi kesalahan server"
+    });
+  }
+}
 
 const deleteLinktree = async (req, res) => {
   try {
@@ -213,4 +242,5 @@ export default {
   linktreeRoom,
   linktreeRoomEdit,
   deleteLinktree,
+  editLinktreeURL
 };

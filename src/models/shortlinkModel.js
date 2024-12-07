@@ -25,7 +25,7 @@ Shortlink.patch = async (title, custom, oldUrl) => {
     return pool.query(
       `UPDATE shortlinks 
        SET 
-        title = $1, short_url = $2, 
+        shortlink_title = $1, short_url = $2, 
         time_shortlink_last_updated = CURRENT_TIMESTAMP 
        WHERE short_url = $3`,
       [title, custom, oldUrl]
@@ -38,7 +38,7 @@ Shortlink.delete = async (field, value) => {
 };
 
 Shortlink.insert = async (id_shortlink, long_url, short_url, email, title, method) => {
-    return await pool.query(`INSERT INTO shortlinks(id_shortlink, long_url, short_url, time_shortlink_created, email, title, create_method, time_shortlink_last_updated) VALUES ($1, $2, $3, now()::timestamp, $4, $5, $6, now()::timestamp)`, [id_shortlink, long_url, short_url, email, title, method]);
+    return await pool.query(`INSERT INTO shortlinks(id_shortlink, long_url, short_url, time_shortlink_created, email, shortlink_title, create_method, time_shortlink_last_updated) VALUES ($1, $2, $3, now()::timestamp, $4, $5, $6, now()::timestamp)`, [id_shortlink, long_url, short_url, email, title, method]);
 }
 
 Shortlink.exists = async (field, value) => {
@@ -48,7 +48,7 @@ Shortlink.exists = async (field, value) => {
 
 Shortlink.getByEmailPaginated = async (email) => {
     return await pool.query(
-        `SELECT id_shortlink, title, short_url, long_url, TO_CHAR(time_shortlink_created, 'DD-MM-YYYY') AS time_shortlink_created
+        `SELECT id_shortlink, shortlink_title, short_url, long_url, TO_CHAR(time_shortlink_created, 'DD-MM-YYYY') AS time_shortlink_created
          FROM shortlinks s
          WHERE email = $1 and create_method = 'shortlink'
          ORDER BY s.time_shortlink_created DESC`,

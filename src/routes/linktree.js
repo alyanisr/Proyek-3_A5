@@ -16,4 +16,6 @@ routerLinktree.route("/save").patch(linktreeController.saveContent);
 
 routerLinktree.route("/delete/:id").delete(linktreeController.deleteLinktree);
 
+routerLinktree.route("/edit-url").patch(linktreeController.editLinktreeURL);
+
 export default routerLinktree;
