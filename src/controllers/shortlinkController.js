@@ -253,7 +253,7 @@ const getShortlinksPaginated = async (req, res) => {
       rows: result.rows
     });
   } catch (error) {
-    console.error("Terjadi error saat menampilkan list shortlink:", errorr);
+    console.error("Terjadi error saat menampilkan list shortlink:", error);
     res.status(500).send({
       msg: "Terjadi kesalahan server"
     });
