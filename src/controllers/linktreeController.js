@@ -99,7 +99,7 @@ const saveContent = async (req, res) => {
     await insertButtons(
       id,
       body.btnArray,
-      "muhammad.reivan.tif23@polban.ac.id"
+      req.session.email
     );
     res.status(200).send("success");
   } catch (e) {
