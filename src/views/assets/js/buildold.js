@@ -64,6 +64,7 @@ function saveLink() {
     renderLinks();
     linkModal.hide();
     form.reset();
+    console.log("Links:", links);
   } else {
     alert("Please fill in all required fields.");
   }
