@@ -1,6 +1,23 @@
 let linkModal = new bootstrap.Modal(document.getElementById("linkModal"));
 let links = [];
 
+document.addEventListener("DOMContentLoaded", () => {
+  const urlParams = new URLSearchParams(window.location.search);
+  const idLinktree = urlParams.get("id");
+
+  if (idLinktree) {
+    // Coba ambil data dari localStorage berdasarkan idLinktree
+    const savedLinks = localStorage.getItem(idLinktree);
+    if (savedLinks) {
+      links = JSON.parse(savedLinks);
+      renderLinks(); // Ini akan sekaligus render linksList dan previewLinks
+    }
+  }
+
+  // Muat data dari server sebagai cadangan
+  fetchLinktreeData();
+});
+
 // Show/Hide pages
 function showBuildPage() {
   document.getElementById("buildPage").style.display = "block";
@@ -35,69 +52,114 @@ function showAddLinkModal() {
 // // At the top of buildold.js, expose links array globally
 // window.links = links;
 
-// Update the saveLink function to also update the global array
+// Modify the saveLink function to keep the short URL fixed
+// Gabungan fungsi saveLink dari dua versi
 function saveLink() {
   const form = document.getElementById("linkForm");
+  const urlParams = new URLSearchParams(window.location.search);
+  const idLinktree = urlParams.get("id");
 
-  // Validasi input
+  // Ambil nilai input
   const title = document.getElementById("linkTitle").value.trim();
   const url = document.getElementById("linkUrl").value.trim();
+  const index = document.getElementById("linkIndex").value;
 
+  // Validasi input
   if (!title || !url) {
     alert("Title and Destination URL are required.");
     return;
   }
 
-  // Cek duplikasi
-  const isDuplicateLink = links.some((link) => link.url === url);
+  // Cek duplikasi URL (mengabaikan jika URL sedang diupdate)
+  const isDuplicateLink = links.some(
+    (link, i) => link.url === url && i !== parseInt(index)
+  );
   if (isDuplicateLink) {
     alert("This link already exists. Please enter a different URL.");
     return;
   }
 
+  // Persiapkan data link
   const linkData = {
     title: title,
     url: url,
-    short:
-      document.getElementById("linkShort").value.trim() ||
-      title.toLowerCase().replace(/\s+/g, "-").slice(0, 10),
+    short: title.toLowerCase().replace(/\s+/g, "-").slice(0, 10), // Gunakan short URL berdasarkan title
   };
 
-  const index = document.getElementById("linkIndex").value;
   if (index === "") {
     // Tambah link baru
     links.push(linkData);
-    window.links = links; // Update global array
   } else {
     // Update link yang sudah ada
-    links[index] = linkData;
-    window.links = links; // Update global array
+    links[index] = { ...links[index], ...linkData }; // Update data sambil menjaga short URL tetap sama
   }
+
+  // Simpan data ke localStorage berdasarkan id_linktree
+  if (idLinktree) {
+    localStorage.setItem(idLinktree, JSON.stringify(links));
+  }
+
+  window.links = links;
 
   renderLinks();
   linkModal.hide();
   form.reset();
 }
 
-// Add event listener to save links button
+function clearLocalStorageIfNeeded() {
+  const urlParams = new URLSearchParams(window.location.search);
+  const idLinktree = urlParams.get("id");
+
+  // Hapus data yang tidak sesuai dengan id_linktree saat ini
+  Object.keys(localStorage).forEach((key) => {
+    if (key !== idLinktree) {
+      localStorage.removeItem(key);
+    }
+  });
+}
+
+// Event Listeners
 document.addEventListener("DOMContentLoaded", () => {
   const saveLinkButton = document.getElementById("saveLinkButton");
   if (saveLinkButton) {
-    saveLinkButton.addEventListener("click", saveLinks);
+    saveLinkButton.addEventListener("click", saveLink);
   }
+
+  const saveChangesButton = document.getElementById("saveChangesButton");
+  if (saveChangesButton) {
+    saveChangesButton.addEventListener("click", saveChanges);
+  }
+
+  // Initialize other components
+  fetchLinktreeData();
 });
 
 // Tambahkan fungsi untuk memuat ulang data dari database saat halaman dimuat
 function loadLinktreeData() {
   const urlParams = new URLSearchParams(window.location.search);
-  const id = urlParams.get("id");
+  const idLinktree = urlParams.get("id");
 
-  fetch(`/linktree/get/${id}`)
+  if (!idLinktree) {
+    console.error("Tidak ada ID Linktree");
+    return;
+  }
+
+  // Cek localStorage terlebih dahulu
+  const localLinks = localStorage.getItem(idLinktree);
+  if (localLinks) {
+    links = JSON.parse(localLinks);
+    renderLinks();
+  }
+
+  // Kemudian muat dari server sebagai cadangan/sinkronisasi
+  fetch(`/linktree/get/${idLinktree}`)
     .then((response) => response.json())
     .then((data) => {
-      // Set links dari data database
-      links = data.buttonData || [];
-      renderLinks();
+      if (data.buttonData && data.buttonData.length > 0) {
+        links = data.buttonData;
+        localStorage.setItem(idLinktree, JSON.stringify(links));
+        renderLinks();
+      }
     })
     .catch((error) => {
       console.error("Error loading linktree data:", error);
@@ -111,61 +173,69 @@ function renderLinks() {
   const linksList = document.getElementById("linksList");
   const previewLinks = document.getElementById("previewLinks");
 
-  // Kosongkan konten sebelumnya
   linksList.innerHTML = "";
   previewLinks.innerHTML = "";
 
-  links.forEach(({ title, short, url }, index) => {
+  links.forEach((link, index) => {
     // Buat elemen kartu link
     const linkItem = document.createElement("div");
     linkItem.className = "card mb-3";
     linkItem.innerHTML = `
       <div class="card-body d-flex justify-content-between align-items-center">
         <div>
-          <h6 class="mb-0">${title}</h6>
-          <small class="text-muted">plb.sh/${short}</small>
+          <h6 class="mb-0">${link.title}</h6>
+          <small class="text-muted">${link.url}</small>
         </div>
         <div>
           <button class="btn btn-sm btn-outline-primary me-2" 
-                  onclick="showEditLinkModal(${index})" aria-label="Edit link ${title}">
+                  onclick="showEditLinkModal(${index})" aria-label="Edit link ${link.title}">
             Edit
           </button>
           <button class="btn btn-sm btn-outline-danger" 
-                  onclick="deleteLink(${index})" aria-label="Delete link ${title}">
+                  onclick="deleteLink(${index})" aria-label="Delete link ${link.title}">
             Delete
           </button>
         </div>
       </div>
     `;
 
-    // Tambahkan elemen kartu ke dalam daftar links
     linksList.appendChild(linkItem);
 
     // Buat elemen pratinjau link
     const previewLink = document.createElement("a");
-    previewLink.href = url;
+    previewLink.href = link.url;
     previewLink.className = "preview-link";
-    previewLink.innerText = title;
+    previewLink.innerText = link.title;
     previewLinks.appendChild(previewLink);
   });
 }
 
 // Edit Link Modal
 function showEditLinkModal(index) {
+  console.log("Edit modal triggered for index:", index);
+  if (!links[index]) {
+    console.error("Link data not found for index:", index);
+    return;
+  }
   const link = links[index];
   document.getElementById("modalTitle").textContent = "Edit Link";
   document.getElementById("linkIndex").value = index;
   document.getElementById("linkTitle").value = link.title;
-  document.getElementById("linkDescription").value = link.description || "";
   document.getElementById("linkUrl").value = link.url;
-  document.getElementById("linkShort").value = link.short;
-  linkModal.show();
+  linkModal.show(); // This is the critical line
 }
 
-// Delete Link
 function deleteLink(index) {
   if (confirm("Are you sure you want to delete this link?")) {
+    const urlParams = new URLSearchParams(window.location.search);
+    const idLinktree = urlParams.get("id");
+
     links.splice(index, 1);
+
+    if (idLinktree) {
+      localStorage.setItem(idLinktree, JSON.stringify(links));
+    }
+
     renderLinks();
   }
 }
@@ -190,6 +260,7 @@ let linktreeId = getLinktreeId();
 async function fetchLinktreeData() {
   const urlParams = new URLSearchParams(window.location.search);
   const id = urlParams.get("id");
+
   if (!id) {
     alert("ID tidak ditemukan di URL!");
     return;
@@ -202,9 +273,9 @@ async function fetchLinktreeData() {
     }
 
     const data = await response.json();
-    console.log("Button Data:", data.buttonData);
+    console.log("Received data:", data);
 
-    // Broadcast button data to designLinktree.js
+    // Broadcast button data to other scripts
     const buttonDataEvent = new CustomEvent("buttonDataReceived", {
       detail: {
         buttonData: data.buttonData || [],
@@ -214,9 +285,10 @@ async function fetchLinktreeData() {
     window.dispatchEvent(buttonDataEvent);
 
     // Render tombol berdasarkan data buttonData
-    renderButtons(data.buttonData);
+    renderButtons(data.buttonData || []);
   } catch (error) {
     console.error("Error loading buttons:", error);
+    alert("Gagal memuat link. Silakan coba lagi nanti.");
   }
 }
 
@@ -251,49 +323,8 @@ function renderButtons(buttonData = []) {
   });
 }
 
-function fetchLinktreeData() {
-  const urlParams = new URLSearchParams(window.location.search);
-  const id = urlParams.get("id");
-
-  if (!id) {
-    console.error("No Linktree ID found in URL");
-    return;
-  }
-
-  fetch(`/linktree/get/${id}`)
-    .then((response) => {
-      if (!response.ok) {
-        throw new Error("Failed to fetch Linktree data");
-      }
-      return response.json();
-    })
-    .then((data) => {
-      console.log("Received data:", data);
-
-      // Dispatch button data event
-      const buttonDataEvent = new CustomEvent("buttonDataReceived", {
-        detail: {
-          buttonData: data.buttonData || [],
-          linktreeId: id,
-        },
-      });
-      window.dispatchEvent(buttonDataEvent);
-
-      // Render buttons
-      renderButtons(data.buttonData || []);
-    })
-    .catch((error) => {
-      console.error("Error loading buttons:", error);
-      // Optionally show user-friendly error message
-      alert("Failed to load links. Please try again later.");
-    });
-}
-
 // Panggil fetchLinktreeData saat halaman dimuat
 document.addEventListener("DOMContentLoaded", fetchLinktreeData);
-
-// const urlParams = new URLSearchParams(window.location.search);
-// const id = urlParams.get("id"); // Ambil ID dari URL
 
 // Get DOM elements
 const titleInput = document.getElementById("titleInput");
@@ -664,29 +695,18 @@ window.addEventListener("buttonDataReceived", (event) => {
 });
 
 async function saveChanges() {
+  const urlParams = new URLSearchParams(window.location.search);
+  const idLinktree = urlParams.get("id");
+
+  if (!idLinktree) {
+    alert("ID Linktree tidak ditemukan di URL!");
+    return;
+  }
+
   try {
-    // Validate currentLinktreeId
-    if (!currentLinktreeId) {
-      throw new Error("Linktree ID tidak ditemukan!");
-    }
-
-    // Debug: Log collected data
-    console.log("Collecting design data...");
+    // Collect design data (from the second file's implementation)
     const designData = await collectDesignData();
-    console.log("Collected Design Data:", designData);
 
-    // Get button data from buildold.js
-    const buttonData = window.links
-      ? window.links.map((link) => ({
-          name: link.title, // Ganti title menjadi name
-          url: link.url,
-          short: link.short,
-        }))
-      : [];
-
-    console.log("Button Data:", buttonData);
-
-    // Prepare data for sending
     const jsonData = {
       title: designData.title || "",
       bio: designData.bio || "",
@@ -698,44 +718,32 @@ async function saveChanges() {
           value: themeValue[activeThemeType],
         },
       },
-      btnArray: buttonData,
+      btnArray: links.map((link) => ({
+        name: link.title,
+        url: link.url,
+        short: link.short,
+      })),
     };
 
-    console.log("JSON Data to send:", jsonData);
+    const response = await fetch(
+      `http://localhost:8000/linktree/save?id=${idLinktree}`,
+      {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(jsonData),
+      }
+    );
 
-    // Debugging: Check server URL
-    const saveUrl = `http://localhost:8000/linktree/save?id=${currentLinktreeId}`;
-    console.log("Save URL:", saveUrl);
-
-    const response = await fetch(saveUrl, {
-      method: "PATCH",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(jsonData),
-    });
-
-    if (!response.ok) {
+    if (response.ok) {
+      alert("Perubahan berhasil disimpan!");
+    } else {
       const errorText = await response.text();
-      throw new Error(
-        `HTTP error! status: ${response.status}, message: ${errorText}`
-      );
+      throw new Error(`Save failed: ${errorText}`);
     }
-
-    // Tambahkan penanganan respons yang fleksibel
-    const responseText = await response.text();
-    try {
-      const responseData = JSON.parse(responseText);
-      console.log("Server Response:", responseData);
-    } catch {
-      // Jika bukan JSON, log teks asli
-      console.log("Server Response (not JSON):", responseText);
-    }
-
-    alert("Perubahan berhasil disimpan!");
   } catch (error) {
-    console.error("Detailed error:", error);
-    console.error("Error stack:", error.stack);
+    console.error("Error saving changes:", error);
     alert(`Terjadi kesalahan: ${error.message}`);
   }
 }
