@@ -117,31 +117,8 @@
 
         <div id="History" class="tabcontent">
           <h3>History</h3>
-          <div class="history-item">
-            <i data-feather="youtube"></i>
-            <div class="link-details">
-              <a href="https://plb.sh/AbC123">c.sh/me</a>
-              <p><i data-feather="calendar"></i> 14 July 2024</p>
-            </div>
-            <div class="actions">
-              <button><i data-feather="copy"></i> Copy</button>
-              <button><i data-feather="share-2"></i> Share</button>
-              <button><i data-feather="edit"></i> Edit</button>
-              <button><i data-feather="trash-2"></i> Delete</button>
-            </div>
-          </div>
-          <div class="history-item">
-            <i data-feather="file-text"></i>
-            <div class="link-details">
-              <a href="https://plb.sh/dEf456">c.sh/academics</a>
-              <p><i data-feather="calendar"></i> 10 July 2024</p>
-            </div>
-            <div class="actions">
-              <button><i data-feather="copy"></i> Copy</button>
-              <button><i data-feather="share-2"></i> Share</button>
-              <button><i data-feather="edit"></i> Edit</button>
-              <button><i data-feather="trash-2"></i> Delete</button>
-            </div>
+          <div id="room-history-list">
+            <!-- Rooms akan ditambahkan di sini secara dinamis -->
           </div>
         </div>
       </div>
@@ -156,40 +133,174 @@
       // Event listener for form submission
       document.addEventListener("DOMContentLoaded", () => {
         const form = document.getElementById("linktree-form");
+        const historyList = document.getElementById("room-history-list");
+
+        // Fungsi untuk memuat history dari Local Storage
+        function loadHistoryFromLocalStorage() {
+          const rooms = JSON.parse(
+            localStorage.getItem("linkTreeRooms") || "[]"
+          );
+          rooms.forEach((room) => {
+            addRoomToHistory(room);
+          });
+        }
+
+        // Fungsi untuk menyimpan room ke Local Storage
+        function saveRoomToLocalStorage(room) {
+          const rooms = JSON.parse(
+            localStorage.getItem("linkTreeRooms") || "[]"
+          );
+          rooms.unshift(room);
+          // Batasi jumlah room yang disimpan misalnya menjadi 10
+          localStorage.setItem(
+            "linkTreeRooms",
+            JSON.stringify(rooms.slice(0, 10))
+          );
+        }
+
+        // Panggil fungsi load history saat halaman dimuat
+        loadHistoryFromLocalStorage();
+
+        function addRoomToHistory(room) {
+          const historyItem = document.createElement("div");
+          historyItem.classList.add("history-item");
+          historyItem.innerHTML = `
+      <i data-feather="link-2"></i>
+      <div class="link-details">
+        <a href="https://plb.sh/${room.customUrl}">plb.sh/${room.customUrl}</a>
+        <p><i data-feather="calendar"></i> ${
+          room.createdAt ||
+          new Date().toLocaleDateString("id-ID", {
+            day: "numeric",
+            month: "long",
+            year: "numeric",
+          })
+        }</p>
+      </div>
+      <div class="actions">
+        <button onclick="copyToClipboard('https://plb.sh/${room.customUrl}')">
+          <i data-feather="copy"></i> Copy
+        </button>
+        <button onclick="shareRoom('https://plb.sh/${room.customUrl}')">
+          <i data-feather="share-2"></i> Share
+        </button>
+        <button onclick="editRoom('${room.customUrl}')">
+          <i data-feather="edit"></i> Edit
+        </button>
+        <button onclick="deleteRoom('${room.customUrl}')">
+          <i data-feather="trash-2"></i> Delete
+        </button>
+      </div>
+    `;
+
+          historyList.insertBefore(historyItem, historyList.firstChild);
+          feather.replace(); // Refresh feather icons
+        }
+
+        // Fungsi copy to clipboard
+        window.copyToClipboard = (url) => {
+          navigator.clipboard.writeText(url).then(() => {
+            alert("Link copied!");
+          });
+        };
+
+        // Fungsi share
+        window.shareRoom = (url) => {
+          if (navigator.share) {
+            navigator.share({
+              title: "My LinkTree Room",
+              url: url,
+            });
+          } else {
+            alert("Sharing not supported");
+          }
+        };
+
+        // Tambahkan fungsi edit dan delete placeholder
+        window.editRoom = (customUrl) => {
+          alert(`Editing room: ${customUrl}`);
+        };
+
+        // Tambahkan di dalam event listener atau sebagai fungsi global
+        window.deleteRoom = (customUrl) => {
+          const rooms = JSON.parse(
+            localStorage.getItem("linkTreeRooms") || "[]"
+          );
+          const updatedRooms = rooms.filter(
+            (room) => room.customUrl !== customUrl
+          );
+
+          localStorage.setItem("linkTreeRooms", JSON.stringify(updatedRooms));
+
+          // Hapus elemen dari DOM
+          const roomElement = document.querySelector(
+            `.history-item:has(a[href$="${customUrl}"])`
+          );
+          if (roomElement) {
+            roomElement.remove();
+          }
+
+          // Kirim request ke backend untuk menghapus room
+          fetch(`http://localhost:8000/linktree/delete-room/${customUrl}`, {
+            method: "DELETE",
+          });
+        };
 
         form.addEventListener("submit", async (event) => {
-          event.preventDefault(); // Prevent form from submitting the default way
-          console.log("Form submitted, preventing default...");
+          event.preventDefault();
 
-          // Ambil data dari form
           const title = document.getElementById("title-input").value;
           const customUrl = document.getElementById("url-input").value;
 
           try {
-            // Kirim request POST ke backend untuk membuat room
             const response = await fetch(
               "http://localhost:8000/linktree/create-room",
               {
                 method: "POST",
                 headers: {
-                  "Content-Type": "application/json", // Menentukan tipe konten
+                  "Content-Type": "application/json",
                 },
-                body: JSON.stringify({ title, customUrl }), // Mengirim data sebagai JSON
+                body: JSON.stringify({ title, customUrl }),
               }
             );
 
             if (response.ok) {
-              // Redirect langsung berdasarkan lokasi yang dikirim oleh server
+              const roomData = {
+                title,
+                customUrl,
+                createdAt: new Date().toLocaleDateString("id-ID", {
+                  day: "numeric",
+                  month: "long",
+                  year: "numeric",
+                }),
+              };
+
+              // Simpan ke Local Storage
+              saveRoomToLocalStorage(roomData);
+
+              // Tambahkan room ke history
+              addRoomToHistory(roomData);
+
+              // Reset form
+              form.reset();
+
+              // Buka tab History
+              document
+                .querySelector(
+                  ".tablinks[onclick=\"openTab(event, 'History')\"]"
+                )
+                .click();
+
+              // Redirect atau lakukan sesuatu setelah berhasil
               window.location.href = response.url;
             } else if (response.status === 400) {
-              // Jika custom URL sudah ada, tampilkan pesan error
-              alert("Custom URL already exists! Please choose another.");
+              alert("Custom URL sudah digunakan. Pilih URL lain.");
             } else {
-              alert("An error occurred. Please try again.");
+              alert("Gagal membuat room. Coba lagi.");
             }
           } catch (error) {
-            console.error("Error submitting form:", error);
-            alert("Failed to create the room. Check your connection.");
+            console.error("Error:", error);
+            alert("Gagal membuat room. Periksa koneksi.");
           }
         });
       });

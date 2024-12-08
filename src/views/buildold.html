@@ -17,7 +17,7 @@
   <body>
     <div class="sidebar d-flex flex-column align-items-center">
       <div class="mb-3">
-        <img alt="Logo" class="rounded-circle" />
+        <img src="/api/placeholder/40/40" alt="Logo" class="rounded-circle" />
       </div>
       <div class="nav flex-column">
         <a href="#" class="nav-link mb-2" data-bs-toggle="tooltip" title="Home">
@@ -389,7 +389,13 @@
     </div>
 
     <!-- Add/Edit Link Modal -->
-    <div class="modal fade" id="linkModal">
+    <div
+      class="modal fade"
+      id="linkModal"
+      tabindex="-1"
+      aria-labelledby="modalTitle"
+      aria-hidden="true"
+    >
       <div class="modal-dialog">
         <div class="modal-content">
           <div class="modal-header">
@@ -398,39 +404,35 @@
               type="button"
               class="btn-close"
               data-bs-dismiss="modal"
+              aria-label="Close"
             ></button>
           </div>
           <div class="modal-body">
-            <form id="linkForm">
+            <form id="linkForm" novalidate>
               <input type="hidden" id="linkIndex" />
               <div class="mb-3">
-                <label class="form-label">Title</label>
+                <label for="linkTitle" class="form-label">Button Name</label>
                 <input
                   type="text"
                   class="form-control"
                   id="linkTitle"
+                  name="linkTitle"
                   required
                 />
-              </div>
-              <div class="mb-3">
-                <label class="form-label">Description (optional)</label>
-                <input type="text" class="form-control" id="linkDescription" />
-              </div>
-              <div class="mb-3">
-                <label class="form-label">Destination URL</label>
-                <input type="url" class="form-control" id="linkUrl" required />
-              </div>
-              <div class="mb-3">
-                <label class="form-label">Short Link</label>
-                <div class="input-group">
-                  <span class="input-group-text">plb.sh/</span>
-                  <input
-                    type="text"
-                    class="form-control"
-                    id="linkShort"
-                    required
-                  />
+                <div class="invalid-feedback">
+                  Please provide a button name.
                 </div>
+              </div>
+              <div class="mb-3">
+                <label for="linkUrl" class="form-label">Destination URL</label>
+                <input
+                  type="url"
+                  class="form-control"
+                  id="linkUrl"
+                  name="linkUrl"
+                  required
+                />
+                <div class="invalid-feedback">Please provide a valid URL.</div>
               </div>
             </form>
           </div>
@@ -482,6 +484,5 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/js/all.min.js"></script>
     <script src="/assets/js/buildold.js"></script>
-    <script src="/assets/js/designLinktree.js"></script>
   </body>
 </html>

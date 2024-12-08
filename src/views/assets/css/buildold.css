@@ -5,7 +5,7 @@
   border-radius: 30px;
   overflow: hidden;
   position: fixed;
-  right: 20px;
+  right: 100px; /* Geser lebih ke kiri */
   top: 50%;
   transform: translateY(-50%);
 }
@@ -29,6 +29,35 @@
 .preview-link:hover {
   transform: translateY(-2px);
   background: white;
+}
+
+/* Media queries untuk membuatnya lebih responsif */
+@media screen and (max-width: 1024px) {
+  .preview-phone {
+    width: 240px; /* Lebih kecil di layar sedang */
+    height: 480px;
+    right: 30px; /* Geser lebih ke kiri */
+  }
+}
+
+@media screen and (max-width: 768px) {
+  .preview-phone {
+    width: 200px; /* Lebih kecil di layar kecil */
+    height: 400px;
+    right: 20px;
+    top: auto; /* Hilangkan fix top untuk layar kecil */
+    bottom: 20px; /* Pindah ke bawah */
+    transform: none; /* Hilangkan transform */
+  }
+}
+
+@media screen and (max-width: 480px) {
+  .preview-phone {
+    width: 160px; /* Lebih kecil di layar sangat kecil */
+    height: 320px;
+    right: 10px;
+    bottom: 10px;
+  }
 }
 
 .sidebar {
