@@ -11,7 +11,7 @@ Qr.show = async(id) => {
 } 
 
 Qr.getid = async(email) => {
-    return await pool.query('SELECT id_qr FROM qr_codes WHERE email = $1', [email])
+    return await pool.query('SELECT id_qr FROM qr_codes WHERE email = $1 ORDER BY latest_update DESC', [email])
 }
 
 Qr.exists = async (field, value) => {
@@ -31,6 +31,10 @@ Qr.checkOwner = async(id_qr, email) =>{
       )
     `;
     return await pool.query(query, [id_qr, email]);
+}
+
+Qr.Update = async (style,id_qr) => {
+    return await pool.query('UPDATE qr_codes SET style = $1 WHERE id_qr = $2',[style,id_qr])
 }
 
 export default Qr;
