@@ -362,19 +362,19 @@ async function handleImageUpload(e) {
       const base64String = await fileToBase64(file);
       currentProfileImage = base64String;
 
-      // Update both preview and actual image
+      // Update preview dan actual image
       updateProfileImage(`data:${file.type};base64,${base64String}`);
 
-      // Store in window object for collectDesignData
+      // Simpan di window object untuk collectDesignData
       window.currentProfileImageBase64 = base64String;
 
-      // Close modal
+      // Tutup modal
       bootstrap.Modal.getInstance(
         document.getElementById("imageOptionsModal")
       ).hide();
     } catch (error) {
       console.error("Error processing image:", error);
-      alert("Failed to process image. Please try again.");
+      alert("Failed to process image. Please check the file and try again.");
     }
   }
 }
@@ -740,25 +740,6 @@ async function saveChanges() {
   }
 }
 
-// Fungsi untuk konversi file ke base64 dengan buffer
-async function fileToBase64(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      // Konversi ArrayBuffer ke base64
-      const base64String = btoa(
-        new Uint8Array(reader.result).reduce(
-          (data, byte) => data + String.fromCharCode(byte),
-          ""
-        )
-      );
-      resolve(base64String);
-    };
-    reader.onerror = reject;
-    reader.readAsArrayBuffer(file);
-  });
-}
-
 async function collectDesignData() {
   try {
     // Tambahkan pengecekan elemen
@@ -771,10 +752,10 @@ async function collectDesignData() {
     // Profile Image Handling
     let profileImageBase64 = null;
 
-    // Priority:
-    // 1. Newly uploaded file
-    // 2. Previously stored base64 image
-    // 3. Current profile image
+    // Prioritas:
+    // 1. Resize gambar yang baru diunggah
+    // 2. Gunakan base64 yang sudah tersimpan
+    // 3. Gunakan gambar profil saat ini
     if (profileImageInput && profileImageInput.files.length > 0) {
       const file = profileImageInput.files[0];
       profileImageBase64 = await fileToBase64(file);
@@ -817,6 +798,22 @@ async function collectDesignData() {
         type: "solid-color",
         value: solidColor ? solidColor.value : "#3498db",
       };
+    }
+
+    // Handle background image conversion
+    if (activeThemeType === "image") {
+      const imageUrl = themeValue["image"];
+      if (imageUrl && imageUrl.startsWith("/assets/")) {
+        try {
+          // Convert local image URL to base64
+          const response = await fetch(imageUrl);
+          const blob = await response.blob();
+          const base64 = await fileToBase64(blob);
+          themeValue["image"] = `data:${blob.type};base64,${base64}`;
+        } catch (error) {
+          console.error("Error converting background image:", error);
+        }
+      }
     }
 
     // Button style collection
@@ -864,25 +861,106 @@ async function collectDesignData() {
   }
 }
 
-// Tambahkan fungsi pendukung jika belum ada
-async function urlToBase64(url) {
+// Fungsi untuk resize gambar menggunakan canvas
+function resizeImage(file, maxWidth = 300, maxHeight = 300) {
+  // Reduced max dimensions
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new Image();
+      img.onload = () => {
+        let width = img.width;
+        let height = img.height;
+
+        if (width > maxWidth || height > maxHeight) {
+          const ratio = Math.min(maxWidth / width, maxHeight / height);
+          width = Math.round(width * ratio);
+          height = Math.round(height * ratio);
+        }
+
+        const canvas = document.createElement("canvas");
+        const ctx = canvas.getContext("2d");
+        canvas.width = width;
+        canvas.height = height;
+        ctx.drawImage(img, 0, 0, width, height);
+
+        // Increase compression by reducing quality
+        canvas.toBlob(
+          (blob) => {
+            resolve(blob);
+          },
+          "image/jpeg", // Force JPEG format for better compression
+          0.5 // Reduced quality to 50%
+        );
+      };
+      img.onerror = reject;
+      img.src = event.target.result;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+// Fungsi untuk konversi file ke base64 dengan resize
+async function fileToBase64(file) {
   try {
-    const response = await fetch(url);
-    const blob = await response.blob();
+    // Resize gambar terlebih dahulu
+    const resizedBlob = await resizeImage(file);
+
+    // Konversi blob ke base64
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.onloadend = () => {
+        // Ambil base64 tanpa header data URL
         const base64String = reader.result.split(",")[1];
         resolve(base64String);
       };
       reader.onerror = reject;
-      reader.readAsDataURL(blob);
+      reader.readAsDataURL(resizedBlob);
     });
   } catch (error) {
-    console.error("Error converting URL to base64:", error);
-    return null;
+    console.error("Error converting file to base64:", error);
+    throw error;
   }
 }
+
+// Fungsi konversi URL ke base64 dengan resize
+async function urlToBase64(url) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = "Anonymous"; // Untuk menghandle CORS
+
+    img.onload = () => {
+      const canvas = document.createElement("canvas");
+      const ctx = canvas.getContext("2d");
+
+      // Resize gambar
+      const maxWidth = 800;
+      const maxHeight = 800;
+      let width = img.width;
+      let height = img.height;
+
+      if (width > maxWidth || height > maxHeight) {
+        const ratio = Math.min(maxWidth / width, maxHeight / height);
+        width = Math.round(width * ratio);
+        height = Math.round(height * ratio);
+      }
+
+      canvas.width = width;
+      canvas.height = height;
+
+      // Gambar ulang dengan ukuran baru
+      ctx.drawImage(img, 0, 0, width, height);
+
+      // Convert ke base64
+      resolve(canvas.toDataURL("image/jpeg", 0.7).split(",")[1]);
+    };
+
+    img.onerror = reject;
+    img.src = url;
+  });
+}
+
 // Tambahkan event listener untuk menyimpan perubahan
 document.addEventListener("DOMContentLoaded", () => {
   const saveButton = document.getElementById("saveChangesButton"); // Pastikan ada tombol dengan ID ini di HTML
