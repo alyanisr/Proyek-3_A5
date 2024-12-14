@@ -316,7 +316,7 @@ const generateQRext = async (req, res) => {
     // Send response with the QR code as a data URI
     const base64Image = outputBuffer.toString('base64');
     const mimeType = 'image/png';
-    res.json({ message: 'QR code generated successfully', url: `http://localhost:8000/tes/${namafile}.png` });
+    res.json({ message: 'QR code generated successfully', url: `http://plbsh.polban.dev/tes/${namafile}.png` });
 
     console.log(`QR code saved to ${filePath}`);
   } catch (error) {
