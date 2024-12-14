@@ -357,9 +357,27 @@ const getqrext = async (req, res) => {
 const updateqr = async (req,res) => {
   try {
     const { id } = req.params;
-    const { style } = req.body;
+    const { body } = req;
+    const email = req.session.email;
     
-    Qr.Update(style,id);
+    const ownershipCheck = await Qr.checkOwner(id, email);
+    if (!ownershipCheck.rows[0]?.exists) {
+      console.log('Unauthorized attempt to update QR code:', { id, email });
+      return res.status(403).json({
+        success: false,
+        error: 'You do not have permission to update this QR code',
+      });
+    }
+
+    const result = await Qr.Update(body,id);
+
+    if (result.rowCount === 0) {
+      console.log('QR code not found during deletion:', id);
+      return res.status(404).json({
+        success: false,
+        error: 'QR code not found',
+      });
+    }
     
     res.status(200).json({
       success: true,
