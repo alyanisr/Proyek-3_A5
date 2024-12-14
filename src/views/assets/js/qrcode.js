@@ -6,7 +6,7 @@ let currentQRCode = {
   }
 };
 
-let idstyl;
+let idstyl = null;
 
 // Function to switch between tabs
 function openTab(evt, tabName) {
