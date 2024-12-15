@@ -13,7 +13,7 @@ Button.getBy = async (field, value) => {
 }
 
 Button.getByExceptID = async (field, value) => {
-    const sql = format(`SELECT button_position, button_name, id_shortlink FROM buttons WHERE %I = $1 ORDER BY button_position ASC`, field);
+    const sql = format(`SELECT button_position, button_name, buttons id_shortlink, long_url FROM buttons INNER JOIN shortlinks ON buttons.id_shortlink = shortlinks.id_shortlink WHERE %I = $1 ORDER BY button_position ASC`, field);
     return await pool.query(sql, [value]);
 }
 
