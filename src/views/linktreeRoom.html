@@ -2,53 +2,89 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+    />
     <title>Dynamic Linktree</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
+      body {
+        background-size: cover;
+        background-position: center;
+        background-attachment: fixed;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh;
+        margin: 0;
+        padding: 0;
+        overflow: hidden;
+      }
+      .linktree-container {
+        width: 100%;
+        max-width: 380px;
+        max-height: 90vh;
+        overflow-y: auto;
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+      }
+      .linktree-container::-webkit-scrollbar {
+        display: none;
+      }
       .social-link {
         transition: transform 0.3s ease, background 0.3s ease;
       }
       .social-link:hover {
         transform: scale(1.05);
       }
+      @media (max-width: 480px) {
+        .linktree-container {
+          max-width: 95%;
+          margin: 0 auto;
+        }
+      }
     </style>
   </head>
-  <body class="min-h-screen flex items-center justify-center">
+  <body>
     <div
       id="linktree-container"
-      class="w-full max-w-md p-6 rounded-lg shadow-md text-center relative bg-white bg-opacity-90"
+      class="linktree-container bg-white bg-opacity-70 rounded-2xl shadow-2xl overflow-y-auto"
     >
-      <div
-        id="debug-info"
-        class="absolute top-0 left-0 text-xs text-red-500 p-2 bg-white bg-opacity-50"
-      ></div>
+      <div class="p-4 text-center">
+        <img
+          id="profile-image"
+          src="https://placehold.co/120x120"
+          alt="Profile"
+          class="mx-auto mb-4 rounded-full w-24 h-24 object-cover shadow-md"
+        />
 
-      <img
-        id="profile-image"
-        src="https://placehold.co/120x120"
-        alt="Profile"
-        class="mx-auto mb-4 rounded-full w-30 h-30"
-      />
+        <h1
+          id="linktree-title"
+          class="text-2xl font-bold mb-3 text-gray-800 tracking-tight"
+        >
+          Loading...
+        </h1>
 
-      <h1 id="linktree-title" class="text-2xl font-bold mb-4">Loading...</h1>
+        <p
+          id="linktree-bio"
+          class="mb-4 text-gray-600 text-sm leading-relaxed px-2"
+        ></p>
 
-      <p id="linktree-bio" class="mb-4 text-gray-600"></p>
+        <div id="social-links" class="space-y-3 pb-4">
+          <!-- Social links will be dynamically inserted here -->
+        </div>
 
-      <div id="social-links" class="space-y-4">
-        <!-- Social links will be dynamically inserted here -->
+        <div class="text-xs text-gray-400 border-t border-gray-200 pt-2">
+          plb.sh
+        </div>
       </div>
-
-      <div class="watermark mt-6 text-sm text-gray-400">plb.sh</div>
     </div>
 
     <script>
-      // Debug logging function - dipindah ke atas agar tersedia untuk semua fungsi
-      function logDebug(message) {
-        const debugElement = document.getElementById("debug-info");
-        debugElement.textContent += message + "\n";
-        console.log(message);
-      }
+      // Extract room ID and initialize
+      const urlParams = new URLSearchParams(window.location.search);
+      const roomId = urlParams.get("id");
 
       // Utility function to decode and optimize base64 image
       async function processBase64Image(base64String, maxWidth = 800) {
@@ -90,7 +126,7 @@
             img.onerror = (error) => reject(error);
           });
         } catch (error) {
-          logDebug(`Error processing image: ${error.message}`);
+          console.error(`Error processing image: ${error.message}`);
           return base64String; // Return original if processing fails
         }
       }
@@ -99,9 +135,6 @@
       async function applyTheme(theme) {
         try {
           const body = document.body;
-
-          logDebug(`Theme Type: ${theme.type}`);
-          logDebug(`Theme Value: ${JSON.stringify(theme.value)}`);
 
           // Reset styles
           body.style.background = "";
@@ -115,48 +148,25 @@
               body.style.backgroundColor = theme.value;
               break;
             case "gradient":
-              // Pastikan format gradient sesuai yang disimpan di database
               const [color1, color2] = theme.value.split(",");
               body.style.background = `linear-gradient(to right, ${color1.trim()}, ${color2.trim()})`;
               break;
             case "image":
-              // Langsung gunakan path/URL gambar dari database
               if (
                 theme.value.startsWith("/") ||
                 theme.value.startsWith("http")
               ) {
-                // Jika path lokal atau URL lengkap
                 body.style.backgroundImage = `url('${theme.value}')`;
               } else {
-                // Jika base64, gunakan fungsi processBase64Image
                 const optimizedImage = await processBase64Image(theme.value);
                 body.style.backgroundImage = `url('${optimizedImage}')`;
               }
               body.style.backgroundSize = "cover";
               body.style.backgroundPosition = "center";
               break;
-            default:
-              logDebug(`Unknown theme type: ${theme.type}`);
           }
         } catch (error) {
-          logDebug(`Error applying theme: ${error.message}`);
-        }
-      }
-
-      // Fungsi utilitas untuk menangani gambar
-      async function handleImageProcessing(imageValue) {
-        try {
-          // Cek apakah gambar adalah path/URL atau base64
-          if (imageValue.startsWith("/") || imageValue.startsWith("http")) {
-            // Jika path/URL langsung, kembalikan nilainya
-            return imageValue;
-          } else {
-            // Jika base64, proses dan optimalkan
-            return await processBase64Image(imageValue);
-          }
-        } catch (error) {
-          logDebug(`Error processing image: ${error.message}`);
-          return imageValue; // Kembalikan nilai asli jika gagal
+          console.error(`Error applying theme: ${error.message}`);
         }
       }
 
@@ -164,9 +174,6 @@
       function applyButtonStyles(buttonStyle, fontColor) {
         try {
           const linksContainer = document.getElementById("social-links");
-
-          logDebug(`Button Style Shape: ${buttonStyle.shape}`);
-          logDebug(`Button Style Color: ${buttonStyle.color}`);
 
           const shapeStyles = {
             standard: "rounded-md",
@@ -177,21 +184,18 @@
           const shapeClass = shapeStyles[buttonStyle.shape] || "rounded-md";
 
           linksContainer.querySelectorAll("a").forEach((button) => {
-            button.className = `block w-full py-3 ${shapeClass} transition duration-300`;
+            button.className = `block w-full py-3 ${shapeClass} transition duration-300 hover:opacity-80 shadow-md`;
             button.style.backgroundColor = buttonStyle.color;
-            button.style.color = fontColor; // Use the same font color as title and bio
+            button.style.color = fontColor;
           });
         } catch (error) {
-          logDebug(`Error applying button styles: ${error.message}`);
+          console.error(`Error applying button styles: ${error.message}`);
         }
       }
 
       // Apply font styles
       function applyFontStyles(fontStyle) {
         try {
-          logDebug(`Font Family: ${fontStyle.family}`);
-          logDebug(`Font Color: ${fontStyle.color}`);
-
           const titleElement = document.getElementById("linktree-title");
           const bioElement = document.getElementById("linktree-bio");
           const container = document.getElementById("linktree-container");
@@ -204,29 +208,24 @@
           titleElement.style.color = fontColor;
           bioElement.style.color = fontColor;
 
-          return fontColor; // Return for use in button styling
+          return fontColor;
         } catch (error) {
-          logDebug(`Error applying font styles: ${error.message}`);
-          return "#000000"; // Return default color if error occurs
+          console.error(`Error applying font styles: ${error.message}`);
+          return "#000000";
         }
       }
-
-      // Extract room ID and initialize
-      const urlParams = new URLSearchParams(window.location.search);
-      const roomId = urlParams.get("id");
 
       // Fetch linktree data
       async function fetchLinktreeData() {
         try {
-          logDebug(`Fetching Linktree data for ID: ${roomId}`);
-
           const response = await fetch(`/linktree/get/${roomId}`);
           if (!response.ok) {
             throw new Error("Failed to fetch linktree data");
           }
           const data = await response.json();
 
-          logDebug(`Received Data: ${JSON.stringify(data)}`);
+          // Update page title dynamically
+          document.title = data.title || "Dynamic Linktree";
 
           // Update profile image
           if (data.style.profileImage) {
@@ -265,19 +264,36 @@
           // Create and style buttons
           for (const link of sortedLinks) {
             const button = document.createElement("a");
+            button.classList.add(
+              "block",
+              "w-full",
+              "py-2.5",
+              "text-sm",
+              "text-center"
+            );
+
             try {
               const shortlinkResponse = await fetch(
-                `/api/shortlink/${link.id_shortlink}`
+                `/api/shortlink/${link.id_shortlink}`,
+                {
+                  method: "GET",
+                  headers: {
+                    Accept: "application/json",
+                  },
+                }
               );
+
               if (shortlinkResponse.ok) {
                 const shortlinkData = await shortlinkResponse.json();
-                button.href = shortlinkData.full_url;
+                button.href = shortlinkData.full_url || shortlinkData.long_url;
               } else {
-                button.href = `http://localhost:8000/${link.id_shortlink}`;
+                button.href = link.long_url || `https://default-redirect.com`;
               }
             } catch (error) {
-              logDebug(`Error fetching shortlink: ${error.message}`);
-              button.href = `http://localhost:8000/${link.id_shortlink}`;
+              console.error(
+                `Error fetching shortlink for ${link.button_name}: ${error.message}`
+              );
+              button.href = link.long_url || `https://default-redirect.com`;
             }
 
             button.textContent = link.button_name;
@@ -291,7 +307,7 @@
             applyButtonStyles(data.style.buttonStyle, fontColor);
           }
         } catch (error) {
-          logDebug(`Error fetching linktree data: ${error.message}`);
+          console.error(`Error fetching linktree data: ${error.message}`);
           const titleElement = document.getElementById("linktree-title");
           titleElement.textContent = "Failed to load Linktree";
         }
@@ -303,13 +319,8 @@
       } else {
         const titleElement = document.getElementById("linktree-title");
         titleElement.textContent = "Invalid Room ID";
-        logDebug("No Room ID provided");
+        console.error("No Room ID provided");
       }
-
-      // Error handling
-      window.addEventListener("unhandledrejection", (event) => {
-        logDebug(`Unhandled promise rejection: ${event.reason}`);
-      });
     </script>
   </body>
 </html>

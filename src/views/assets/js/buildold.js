@@ -492,7 +492,8 @@ async function renderButtons(btnArray = [], styleData = {}) {
     }
 
     const previewLink = document.createElement("a");
-    previewLink.href = button.url || "#";
+    // Use long_url instead of url, with fallback
+    previewLink.href = button.long_url || button.url || "#";
     previewLink.className = "preview-link";
     previewLink.innerText = button.button_name;
 
