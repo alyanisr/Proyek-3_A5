@@ -1,24 +1,41 @@
 let linkModal = new bootstrap.Modal(document.getElementById("linkModal"));
 let links = [];
+let initialLoad = true;
 
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", async () => {
   const urlParams = new URLSearchParams(window.location.search);
   const idLinktree = urlParams.get("id");
 
-  if (idLinktree) {
-    const savedLinks = localStorage.getItem(idLinktree);
-    if (savedLinks) {
-      links = JSON.parse(savedLinks);
-      renderLinks();
-    }
+  if (!idLinktree) {
+    console.error("No Linktree ID found");
+    return;
   }
 
-  // Add error handling and logging
   try {
+    // First check localStorage for any unsaved changes
+    const localLinks = localStorage.getItem(idLinktree);
+    if (localLinks) {
+      links = JSON.parse(localLinks);
+    } else {
+      // If no local changes, fetch from database
+      const response = await fetch(`/linktree/get/${idLinktree}`);
+      const data = await response.json();
+      if (data.buttonData && data.buttonData.length > 0) {
+        links = data.buttonData;
+        // Store in localStorage
+        localStorage.setItem(idLinktree, JSON.stringify(links));
+      }
+    }
+
+    // Render both the link list and preview buttons
+    renderLinks();
+    await loadDesignData(); // Load design settings
+
+    initialLoad = false;
     initializeBackgroundImages();
     fetchLinktreeData();
   } catch (error) {
-    console.error("Initialization error:", error);
+    console.error("Error loading data:", error);
   }
 });
 
@@ -58,51 +75,27 @@ function showAddLinkModal() {
 
 // Modify the saveLink function to keep the short URL fixed
 function saveLink() {
-  const form = document.getElementById("linkForm");
   const urlParams = new URLSearchParams(window.location.search);
   const idLinktree = urlParams.get("id");
 
-  // Get input values
   const title = document.getElementById("linkTitle").value.trim();
   const url = document.getElementById("linkUrl").value.trim();
   const index = document.getElementById("linkIndex").value;
 
-  // Validate input
   if (!title || !url) {
-    alert("Title and Destination URL are required.");
+    alert("Title and URL are required.");
     return;
   }
 
-  // Check for duplicate links (ignore if updating existing)
-  const isDuplicateLink = links.some(
-    (link, i) => link.url === url && i !== parseInt(index)
-  );
-  if (isDuplicateLink) {
-    alert("This link already exists. Please enter a different URL.");
-    return;
-  }
-
-  // Generete unique shortlink ID
-  const buttonPosition = index === "" ? links.length : parseInt(index);
-  const shortlinkId = `(${title.toLowerCase()},${buttonPosition},${idLinktree},${generateRandomString(
-    4
-  )})`;
-
-  // Prepare link data with complete shortlink information
   const linkData = {
-    button_name: title,
-    button_position: buttonPosition.toString(),
-    long_url: url,
-    id_shortlink: shortlinkId,
-
+    title: title,
+    url: url,
     short: title.toLowerCase().replace(/\s+/g, "-").slice(0, 10),
   };
 
   if (index === "") {
-    // Add new link
     links.push(linkData);
   } else {
-    // Update existing link
     links[index] = { ...links[index], ...linkData };
   }
 
@@ -111,25 +104,11 @@ function saveLink() {
     localStorage.setItem(idLinktree, JSON.stringify(links));
   }
 
-  window.links = links;
-
-  // Render links and create buttons
+  // Update both list and preview immediately
   renderLinks();
-  renderButtons(links); // Pass links array to render buttons
 
   linkModal.hide();
-  form.reset();
-}
-
-// Helper function to generate random string
-function generateRandomString(length) {
-  const characters =
-    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-  let result = "";
-  for (let i = 0; i < length; i++) {
-    result += characters.charAt(Math.floor(Math.random() * characters.length));
-  }
-  return result;
+  document.getElementById("linkForm").reset();
 }
 
 function clearLocalStorageIfNeeded() {
@@ -197,8 +176,8 @@ async function loadLinktreeData() {
     window.dispatchEvent(buttonDataEvent);
 
     // Render preview buttons with style data
-    if (data.btnArray && data.style) {
-      await renderButtons(data.btnArray, data.style);
+    if (data.buttonData && data.style) {
+      await renderButtons(data.buttonData, data.style);
     }
   } catch (error) {
     console.error("Error loading linktree data:", error);
@@ -257,34 +236,47 @@ async function loadDesignData() {
     }
 
     // Initialize fonts with active font from database
-    if (data.style.font) {
+    if (data.style?.font) {
       const fontFamily = data.style.font.family || "Inter";
       const fontColor = data.style.font.color || "#000000";
 
-      // Initialize font options
-      initializeFonts(fontFamily);
+      // Update font color picker
+      const fontColorPicker = document.getElementById("fontColorPicker");
+      if (fontColorPicker) {
+        fontColorPicker.value = fontColor;
+      }
 
-      // Apply font and color
+      // Change font with color
       changeFont(fontFamily, fontColor);
+    }
 
-      // Update color picker
+    if (data.style && data.style.font && data.style.font.color) {
+      const fontColor = data.style.font.color;
+
+      // Prioritaskan warna dari database
+      changeFontColor(fontColor);
+
+      // Update font color picker
       const fontColorPicker = document.getElementById("fontColorPicker");
       if (fontColorPicker) {
         fontColorPicker.value = fontColor;
       }
     }
 
-    if (data.style && data.style.font && data.style.font.color) {
-      const fontColor = data.style.font.color;
-      changeFontColor(fontColor);
-      const fontColorPicker = document.getElementById("fontColorPicker");
-      if (fontColorPicker) fontColorPicker.value = fontColor;
-    }
-
     // Button style application
-    if (data.style.buttonStyle) {
-      await changeButtonStyle(data.style.buttonStyle.shape || "standard");
-      await changeButtonColor(data.style.buttonStyle.color || "#007bff");
+    // Button style restoration
+    if (data.style?.buttonStyle) {
+      const buttonStyle = data.style.buttonStyle.shape || "standard";
+      const buttonColor = data.style.buttonStyle.color || "#007bff";
+
+      changeButtonStyle(buttonStyle);
+      changeButtonColor(buttonColor);
+
+      // Update UI to reflect database state
+      const styleButton = document.querySelector(
+        `.block-shape[data-style="${buttonStyle}"]`
+      );
+      if (styleButton) styleButton.classList.add("active");
     }
 
     // Render buttons with style data
@@ -319,37 +311,61 @@ document.addEventListener("DOMContentLoaded", async () => {
 });
 
 function renderLinks() {
+  // Retrieve stored styles
+  const storedButtonColor = localStorage.getItem("buttonColor") || "#007bff";
+  const storedButtonStyle = localStorage.getItem("buttonStyle") || "standard";
+  const storedFontColor = localStorage.getItem("fontColor") || "#000000";
+  const storedFont = localStorage.getItem("fontFamily") || "Inter";
+
+  // Render link list
   const linksList = document.getElementById("linksList");
-  if (!linksList) return;
-
-  linksList.innerHTML = "";
-
-  links.forEach((link, index) => {
-    const linkItem = document.createElement("div");
-    linkItem.className = "card mb-3";
-    linkItem.innerHTML = `
-      <div class="card-body d-flex justify-content-between align-items-center">
-        <div>
-          <h6 class="mb-0">${link.title}</h6>
-          <small class="text-muted">${link.url}</small>
+  if (linksList) {
+    linksList.innerHTML = "";
+    links.forEach((link, index) => {
+      const linkItem = document.createElement("div");
+      linkItem.className = "card mb-3";
+      linkItem.innerHTML = `
+        <div class="card-body d-flex justify-content-between align-items-center">
+          <div>
+            <h6 class="mb-0">${link.title}</h6>
+            <small class="text-muted">${link.url}</small>
+          </div>
+          <div>
+            <button class="btn btn-sm btn-outline-primary me-2" onclick="showEditLinkModal(${index})">
+              Edit
+            </button>
+            <button class="btn btn-sm btn-outline-danger" onclick="deleteLink(${index})">
+              Delete
+            </button>
+          </div>
         </div>
-        <div>
-          <button class="btn btn-sm btn-outline-primary me-2" 
-                  onclick="showEditLinkModal(${index})" aria-label="Edit link ${link.title}">
-            Edit
-          </button>
-          <button class="btn btn-sm btn-outline-danger" 
-                  onclick="deleteLink(${index})" aria-label="Delete link ${link.title}">
-            Delete
-          </button>
-        </div>
-      </div>
-    `;
-    linksList.appendChild(linkItem);
-  });
+      `;
+      linksList.appendChild(linkItem);
+    });
+  }
 
-  // Always render buttons after updating links
-  renderButtons(links);
+  // Render preview buttons
+  const previewLinks = document.getElementById("previewLinks");
+  if (previewLinks) {
+    previewLinks.innerHTML = "";
+    links.forEach((link) => {
+      const previewLink = document.createElement("a");
+      previewLink.href = link.url;
+      previewLink.className = "preview-link";
+      previewLink.innerText = link.title;
+
+      // Apply persistent button styles
+      applyButtonStyle(previewLink, storedButtonStyle);
+      previewLink.style.backgroundColor = storedButtonColor;
+      previewLink.style.color = storedFontColor;
+
+      // Apply current font
+      previewLink.style.fontFamily = storedFont;
+
+      previewLink.target = "_blank";
+      previewLinks.appendChild(previewLink);
+    });
+  }
 }
 
 // Ensure buttons are rendered on page load
@@ -449,7 +465,7 @@ async function fetchLinktreeData() {
   }
 }
 
-async function renderButtons(buttonData = [], styleData = {}) {
+async function renderButtons(btnArray = [], styleData = {}) {
   const previewLinks = document.getElementById("previewLinks");
   if (!previewLinks) {
     console.error("Preview links container not found!");
@@ -459,82 +475,35 @@ async function renderButtons(buttonData = [], styleData = {}) {
   // Clear existing buttons first
   previewLinks.innerHTML = "";
 
-  // Ensure buttonData is an array
-  if (!Array.isArray(buttonData)) {
-    buttonData = [buttonData]; // Convert single object to array
+  // Ensure btnArray is an array
+  if (!Array.isArray(btnArray)) {
+    console.error("Invalid button data:", btnArray);
+    return;
   }
 
-  // Extract style information
-  const buttonStyle = styleData?.buttonStyle || {
-    shape: "standard",
-    color: "#007bff",
-  };
+  // Default style values
+  const defaultButtonStyle = styleData.buttonStyle?.shape || "standard";
+  const defaultButtonColor = styleData.buttonStyle?.color || "#007bff";
 
-  const fontStyle = styleData?.font || {
-    family: "Inter",
-    color: "#000000",
-  };
-
-  for (const link of buttonData) {
-    if (!link || !link.button_name) {
-      console.warn("Skipping invalid link:", link);
+  for (const button of btnArray) {
+    if (!button || !button.button_name) {
+      console.warn("Skipping invalid button:", button);
       continue;
     }
 
-    try {
-      // Use long_url directly if provided
-      let longUrl =
-        link.long_url ||
-        (link.id_shortlink
-          ? `http://localhost:8000/${link.id_shortlink}`
-          : "#");
+    const previewLink = document.createElement("a");
+    previewLink.href = button.url || "#";
+    previewLink.className = "preview-link";
+    previewLink.innerText = button.button_name;
 
-      const previewLink = document.createElement("a");
-      previewLink.href = longUrl;
-      previewLink.className = "preview-link";
-      previewLink.innerText = link.button_name || "Link";
+    // Apply default button styles from database
+    applyButtonStyle(previewLink, defaultButtonStyle);
+    previewLink.style.backgroundColor = defaultButtonColor;
 
-      // Apply button styles
-      applyButtonStyle(previewLink, buttonStyle.shape || "standard");
-      previewLink.style.backgroundColor = buttonStyle.color || "#007bff";
+    previewLink.style.cursor = "pointer";
+    previewLink.target = "_blank";
 
-      // Apply font styles
-      previewLink.style.fontFamily = fontStyle.family || "Inter";
-      previewLink.style.color = fontStyle.color || "#000000";
-
-      // Additional styling
-      previewLink.style.cursor = "pointer";
-      previewLink.target = "_blank";
-      previewLink.style.textDecoration = "none";
-      previewLink.style.display = "block";
-      previewLink.style.margin = "10px 0";
-      previewLink.style.padding = "10px 20px";
-      previewLink.style.textAlign = "center";
-      previewLink.style.transition = "all 0.3s ease";
-
-      // Add hover effect
-      previewLink.onmouseover = function () {
-        this.style.opacity = "0.8";
-      };
-      previewLink.onmouseout = function () {
-        this.style.opacity = "1";
-      };
-
-      // Store additional attributes
-      previewLink.setAttribute("data-button-name", link.button_name);
-      previewLink.setAttribute("data-button-position", link.button_position);
-      previewLink.setAttribute("data-id-shortlink", link.id_shortlink);
-
-      // Store style data as attributes for tracking
-      previewLink.setAttribute("data-button-style", buttonStyle.shape);
-      previewLink.setAttribute("data-button-color", buttonStyle.color);
-      previewLink.setAttribute("data-font-family", fontStyle.family);
-      previewLink.setAttribute("data-font-color", fontStyle.color);
-
-      previewLinks.appendChild(previewLink);
-    } catch (error) {
-      console.error("Error creating button:", error);
-    }
+    previewLinks.appendChild(previewLink);
   }
 }
 
@@ -545,39 +514,15 @@ document.addEventListener("DOMContentLoaded", fetchLinktreeData);
 const titleInput = document.getElementById("titleInput");
 const bioInput = document.getElementById("bioInput");
 const previewUsername = document.getElementById("previewUsername");
-const fontColorPicker = document.getElementById("fontColorPicker");
 
-// Function to update all preview text colors
-function updatePreviewTextColors(color) {
-  const previewContent = document.getElementById("previewContent");
-  const previewUsername = document.getElementById("previewUsername");
-  const previewBio = document.getElementById("previewBio");
-  const previewElements = [previewContent, previewUsername, previewBio];
-
-  previewElements.forEach((element) => {
-    if (element) {
-      element.style.color = color;
-    }
-  });
-}
-
-// Update font color when color picker changes
-fontColorPicker.addEventListener("input", function (e) {
-  updatePreviewTextColors(e.target.value);
-});
-
-// Update display name in preview with current font color
+// Update display name in preview
 titleInput.addEventListener("input", function () {
-  const currentColor = fontColorPicker.value || "#000000";
   previewUsername.textContent = this.value || "@username";
-  previewUsername.style.color = currentColor;
 });
 
-// Update bio in preview with current font color
+// Update bio in preview
 bioInput.addEventListener("input", function () {
-  const currentColor = fontColorPicker.value || "#000000";
   let previewBio = document.getElementById("previewBio");
-
   if (!previewBio) {
     previewBio = document.createElement("p");
     previewBio.id = "previewBio";
@@ -587,10 +532,23 @@ bioInput.addEventListener("input", function () {
       previewUsername.nextSibling
     );
   }
-
   previewBio.textContent = this.value;
-  previewBio.style.color = currentColor;
 });
+
+// Optional: Ensure color persists when dynamically adding content
+function ensurePreviewColorConsistency(color) {
+  // This function can be called after any dynamic content changes
+  const previewUsername = document.getElementById("previewUsername");
+  const previewBio = document.getElementById("previewBio");
+
+  if (previewUsername) {
+    previewUsername.style.color = color;
+  }
+
+  if (previewBio) {
+    previewBio.style.color = color;
+  }
+}
 
 // Image handling
 function showImageOptions() {
@@ -694,10 +652,8 @@ function initializeFontColor() {
 }
 
 // Change font for preview content
-function changeFont(fontFamily, fontColor = null) {
-  if (!fontFamily) return; // Prevent empty value override
-  console.log("changeFont called with font:", fontFamily);
-  console.log("Font color picker:", document.getElementById("fontColorPicker"));
+function changeFontFamily(fontFamily) {
+  if (!fontFamily) return;
 
   // Update font options active state
   document.querySelectorAll(".font-option").forEach((option) => {
@@ -707,82 +663,119 @@ function changeFont(fontFamily, fontColor = null) {
     }
   });
 
+  // Persist font in localStorage
+  localStorage.setItem("fontFamily", fontFamily);
+
+  // Apply font family to preview elements
+  const previewLinks = document.querySelectorAll(".preview-link");
+  previewLinks.forEach((link) => {
+    link.style.fontFamily = fontFamily;
+  });
+
   const previewUsername = document.getElementById("previewUsername");
   const previewBio = document.getElementById("previewBio");
-  const fontColorPicker = document.getElementById("fontColorPicker");
 
-  if (previewContent) {
-    previewContent.style.fontFamily = fontFamily;
-  }
-
-  // Apply font color if provided, otherwise use the color picker value
-  const color =
-    fontColor || (fontColorPicker ? fontColorPicker.value : "#000000");
-
-  console.log("Selected color:", color);
-
-  if (previewUsername) {
-    console.log("Updating username color");
-    previewUsername.style.color = color;
-  }
-  if (previewBio) previewBio.style.color = color;
-  if (previewContent) previewContent.style.color = color;
+  if (previewUsername) previewUsername.style.fontFamily = fontFamily;
+  if (previewBio) previewBio.style.fontFamily = fontFamily;
 }
 
-// Modify font color picker event listener
+function changeFont(fontFamily, fontColor = null) {
+  // Change font family
+  changeFontFamily(fontFamily);
+
+  // Change font color if provided
+  if (fontColor) {
+    changeFontColor(fontColor);
+  }
+}
+
+document.addEventListener("DOMContentLoaded", async () => {
+  const storedButtonColor = localStorage.getItem("buttonColor") || "#007bff";
+  const storedButtonStyle = localStorage.getItem("buttonStyle") || "standard";
+
+  // Ambil stored values
+  const storedFontColor = localStorage.getItem("fontColor");
+  const storedFont = localStorage.getItem("fontFamily");
+
+  try {
+    // Tunggu data dari database
+    await loadDesignData();
+
+    // Check if font data was loaded from database
+    const fontColorFromDatabase =
+      document.getElementById("fontColorPicker")?.value;
+
+    // Prioritize database font color, then localStorage, then default
+    const finalFontColor =
+      fontColorFromDatabase || storedFontColor || "#000000";
+    const finalFont = storedFont || "Inter";
+
+    // Apply font and color
+    changeFont(finalFont, finalFontColor);
+
+    // Apply stored button style and color
+    changeButtonStyle(storedButtonStyle);
+    changeButtonColor(storedButtonColor);
+  } catch (error) {
+    console.error("Error initializing fonts:", error);
+  }
+});
+
 document.addEventListener("DOMContentLoaded", () => {
   const fontColorPicker = document.getElementById("fontColorPicker");
   if (fontColorPicker) {
-    fontColorPicker.addEventListener("input", function () {
-      const activeFontOption = document.querySelector(".font-option.active");
-      const currentFont = activeFontOption
-        ? activeFontOption.textContent
-        : "Inter";
-
-      // Call changeFont with current font and new color
-      changeFont(currentFont, this.value);
+    fontColorPicker.addEventListener("input", (e) => {
+      const currentFont = localStorage.getItem("fontFamily") || "Inter";
+      changeFont(currentFont, e.target.value);
     });
   }
 });
 
-// Change font color function
+document.addEventListener("DOMContentLoaded", async () => {
+  try {
+    // Tunggu data dari database
+    await loadDesignData();
+
+    // Pastikan font dan warna disetel dari database
+    const storedFont = localStorage.getItem("fontFamily") || "Inter";
+    const storedFontColor = localStorage.getItem("fontColor");
+
+    // Prioritaskan data dari database
+    const fontColorFromDatabase =
+      document.getElementById("fontColorPicker")?.value;
+    const finalFontColor =
+      fontColorFromDatabase || storedFontColor || "#000000";
+
+    // Apply font dan color, pastikan menggunakan warna dari database
+    changeFont(storedFont, finalFontColor);
+  } catch (error) {
+    console.error("Error initializing fonts:", error);
+  }
+});
+
 function changeFontColor(color) {
   if (!color) return;
 
-  // Update color picker value
+  // Simpan warna di localStorage
+  localStorage.setItem("fontColor", color);
+
+  // Update color picker
   const fontColorPicker = document.getElementById("fontColorPicker");
   if (fontColorPicker) {
     fontColorPicker.value = color;
   }
 
-  // Apply color to preview elements
-  const previewUsername = document.getElementById("previewUsername");
-  const previewBio = document.getElementById("previewBio");
-  const previewLinks = document.querySelectorAll(".preview-link");
-  const previewContent = document.getElementById("previewContent");
+  // Apply color ke semua elemen preview
+  const previewElements = [
+    document.getElementById("previewUsername"),
+    document.getElementById("previewBio"),
+    ...document.querySelectorAll(".preview-link"),
+  ];
 
-  // Pastikan warna dapat diterapkan bahkan jika elemen belum ada
-  if (!previewUsername) {
-    console.warn("previewUsername not found");
-  }
-  if (!previewBio) {
-    console.warn("previewBio not found");
-  }
-
-  if (previewUsername) previewUsername.style.color = color;
-  if (previewBio) previewBio.style.color = color;
-  if (previewContent) {
-    // Pastikan semua teks di dalam previewContent mengikuti warna yang sama
-    const textElements = previewContent.querySelectorAll(
-      "*:not(.preview-link)"
-    );
-    textElements.forEach((element) => {
+  previewElements.forEach((element) => {
+    if (element) {
       element.style.color = color;
-    });
-  }
-
-  previewLinks.forEach((link) => {
-    link.style.color = color;
+    }
   });
 }
 
@@ -791,14 +784,12 @@ function changeButtonStyle(style) {
   const previewLinks = document.querySelectorAll(".preview-link");
   const buttons = document.querySelectorAll(".block-shape");
 
-  // Remove active class from all button style options
+  // Reset and update button style options
   buttons.forEach((btn) => {
     btn.classList.remove("active");
-    // Reset data-style attribute
     btn.removeAttribute("data-style");
   });
 
-  // Add active class and data-style to selected style
   const selectedButton = document.querySelector(
     `.block-shape[onclick="changeButtonStyle('${style}')"]`
   );
@@ -807,12 +798,27 @@ function changeButtonStyle(style) {
     selectedButton.setAttribute("data-style", style);
   }
 
-  // Apply button style to preview links
+  // Apply style to preview links dynamically
   previewLinks.forEach((link) => {
     applyButtonStyle(link, style);
-    // Tambahkan atribut data untuk tracking
     link.setAttribute("data-button-style", style);
   });
+
+  // Optional: Store in localStorage for persistence
+  localStorage.setItem("buttonStyle", style);
+}
+
+// Similar enhancement for changeButtonColor
+function changeButtonColor(color) {
+  const previewLinks = document.querySelectorAll(".preview-link");
+
+  previewLinks.forEach((link) => {
+    link.style.backgroundColor = color;
+    link.setAttribute("data-button-color", color);
+  });
+
+  // Persist in localStorage
+  localStorage.setItem("buttonColor", color);
 }
 
 function applyButtonStyle(element, style) {
@@ -828,17 +834,6 @@ function applyButtonStyle(element, style) {
       element.style.borderRadius = "8px";
       break;
   }
-}
-
-// Change button color
-function changeButtonColor(color) {
-  const previewLinks = document.querySelectorAll(".preview-link");
-  previewLinks.forEach((link) => {
-    // Set background color
-    link.style.backgroundColor = color;
-    // Tambahkan data attribute untuk tracking
-    link.setAttribute("data-button-color", color);
-  });
 }
 
 // Theme management
