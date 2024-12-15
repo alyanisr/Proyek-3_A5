@@ -283,7 +283,7 @@ export const shorten = async (url, email, custom = null, method) => {
   //custom ada; cek apakah unik
   if (await isCustomUnique(custom)) {
     const id = await uniqueRandomID();
-    await Shortlink.insert(id, url, custom, email, method);
+    await Shortlink.insert(id, url, custom, email, null, method);
     return id;
   } else {
     console.log("custom url already exists");

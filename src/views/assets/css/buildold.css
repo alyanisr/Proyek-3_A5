@@ -31,6 +31,19 @@
   background: white;
 }
 
+.logo-sidebar {
+  width: 50px; /* Adjust size as needed */
+  height: 50px; /* Adjust size as needed */
+  border-radius: 50%; /* Creates a perfectly circular shape */
+  object-fit: cover; /* Ensures the image fills the circle without distortion */
+  position: fixed; /* Or absolute, depending on your layout */
+  top: 15px; /* Adjust distance from top */
+  left: 15px; /* Adjust distance from left */
+  z-index: 1000; /* Ensures it stays on top of other elements */
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2); /* Optional: adds a subtle shadow */
+  cursor: pointer; /* Optional: changes cursor on hover */
+}
+
 /* Media queries untuk membuatnya lebih responsif */
 @media screen and (max-width: 1024px) {
   .preview-phone {

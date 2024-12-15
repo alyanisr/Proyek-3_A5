@@ -12,6 +12,7 @@ import { loginSession } from "./src/middleware/loginSessionMid.js";
 import { log } from "console";
 import routerext from "./src/routes/external.js";
 import landingPageRouter from "./src/routes/landingpage.js";
+import cors from 'cors';
 
 const PORT = 8000;
 const app = express();
@@ -37,7 +38,7 @@ app.use('/qr',loginSession, routerQr);
 
 app.use('/linktree', loginSession, routerLinktree);
 
-app.use('/tes',routerext);
+app.use('/tes',cors(),routerext);
 
 app.use('/landingpage', landingPageRouter)
 

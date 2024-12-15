@@ -35,4 +35,8 @@ Linktree.exists = async (field, value) => {
     return await pool.query(sql, [value]);
 }
 
+Linktree.getHistory = async (email) => {
+    return await pool.query(`SELECT id_linktree, linktree_url FROM linktrees WHERE email = $1 ORDER BY time_linktree_created DESC`, [email]);
+}
+
 export default Linktree
