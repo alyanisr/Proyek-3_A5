@@ -7,8 +7,8 @@ import crypto from 'crypto';
 import path from 'path';
 import { __dirname } from '../../path.js';
 import { get } from 'https';
-// import { google } from 'googleapis';
-// import { oauth2 } from 'googleapis/build/src/apis/oauth2/index.js';
+import { google } from 'googleapis';
+import { oauth2 } from 'googleapis/build/src/apis/oauth2/index.js';
 
 dotenv.config();
 
@@ -18,11 +18,11 @@ let otpstorage2 = {};
 
 const CLIENT_ID = process.env.CLIENT_ID;
 const CLIENT_SECRET = process.env.CLIENT_SECRET;
-// const REDIRECT_URI = process.env.REDIRECT_URI;
+const REDIRECT_URI = process.env.REDIRECT_URI;
 const REFRESH_TOKEN = process.env.REFRESH_TOKEN;
 
-// const oAuth2Client = new google.auth.OAuth2(CLIENT_ID,CLIENT_SECRET,REDIRECT_URI)
-// oAuth2Client.setCredentials({refresh_token: REFRESH_TOKEN})
+const oAuth2Client = new google.auth.OAuth2(CLIENT_ID,CLIENT_SECRET,REDIRECT_URI)
+oAuth2Client.setCredentials({refresh_token: REFRESH_TOKEN})
 
 let transport; // Declare transport variable outside the function
 

@@ -8,6 +8,40 @@ let currentQRCode = {
 
 let idstyl = null;
 
+function sidebarT() {
+  // Sidebar toggle functionality
+  const sidebarToggle = document.getElementById("sidebar-toggle");
+  const sidebar = document.querySelector(".sidebar");
+
+  sidebarToggle.addEventListener("click", () => {
+  sidebar.classList.toggle("expanded");
+
+  // Change icon direction on toggle
+  if (sidebar.classList.contains("expanded")) {
+    sidebarToggle.innerHTML = '<i data-feather="chevron-left"></i>';
+  } else {
+    sidebarToggle.innerHTML = '<i data-feather="chevron-right"></i>';
+  }
+
+  // Refresh feather icons to update the icon after toggle
+  feather.replace();
+  });
+};
+
+function dropdownT() {
+  // Dropdown functionality for user profile
+  const userIcon = document.getElementById("user-icon");
+  const dropdown = document.getElementById("dropdown");
+
+  userIcon.addEventListener("click", () => {
+    dropdown.classList.toggle("active");
+  });
+
+// Refresh feather icons to update chevron down
+  feather.replace();  
+}
+
+
 // Function to switch between tabs
 function openTab(evt, tabName) {
   var i, tabcontent, tablinks;
