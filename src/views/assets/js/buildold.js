@@ -57,24 +57,23 @@ function showAddLinkModal() {
 // window.links = links;
 
 // Modify the saveLink function to keep the short URL fixed
-// Gabungan fungsi saveLink dari dua versi
 function saveLink() {
   const form = document.getElementById("linkForm");
   const urlParams = new URLSearchParams(window.location.search);
   const idLinktree = urlParams.get("id");
 
-  // Ambil nilai input
+  // Get input values
   const title = document.getElementById("linkTitle").value.trim();
   const url = document.getElementById("linkUrl").value.trim();
   const index = document.getElementById("linkIndex").value;
 
-  // Validasi input
+  // Validate input
   if (!title || !url) {
     alert("Title and Destination URL are required.");
     return;
   }
 
-  // Cek duplikasi URL (mengabaikan jika URL sedang diupdate)
+  // Check for duplicate links (ignore if updating existing)
   const isDuplicateLink = links.some(
     (link, i) => link.url === url && i !== parseInt(index)
   );
@@ -83,29 +82,33 @@ function saveLink() {
     return;
   }
 
-  // Persiapkan data link
+  // Prepare link data with optional shortlink
   const linkData = {
     title: title,
     url: url,
-    short: title.toLowerCase().replace(/\s+/g, "-").slice(0, 10), // Gunakan short URL berdasarkan title
+    short: title.toLowerCase().replace(/\s+/g, "-").slice(0, 10),
+    id_shortlink: null, // Will be generated/assigned later
   };
 
   if (index === "") {
-    // Tambah link baru
+    // Add new link
     links.push(linkData);
   } else {
-    // Update link yang sudah ada
-    links[index] = { ...links[index], ...linkData }; // Update data sambil menjaga short URL tetap sama
+    // Update existing link
+    links[index] = { ...links[index], ...linkData };
   }
 
-  // Simpan data ke localStorage berdasarkan id_linktree
+  // Save to localStorage
   if (idLinktree) {
     localStorage.setItem(idLinktree, JSON.stringify(links));
   }
 
   window.links = links;
 
+  // Render links and create buttons
   renderLinks();
+  renderButtons(links); // Pass links array to render buttons
+
   linkModal.hide();
   form.reset();
 }
@@ -311,7 +314,15 @@ function renderLinks() {
     `;
     linksList.appendChild(linkItem);
   });
+
+  // Always render buttons after updating links
+  renderButtons(links);
 }
+
+// Ensure buttons are rendered on page load
+document.addEventListener("DOMContentLoaded", () => {
+  renderLinks();
+});
 
 // Edit Link Modal
 function showEditLinkModal(index) {
@@ -403,7 +414,7 @@ async function fetchLinktreeData() {
   }
 }
 
-async function renderButtons(buttonData = [], styleData = {}) {
+async function renderButtons(btnArray = []) {
   const previewLinks = document.getElementById("previewLinks");
   if (!previewLinks) {
     console.error("Preview links container not found!");
@@ -413,53 +424,54 @@ async function renderButtons(buttonData = [], styleData = {}) {
   // Clear existing buttons first
   previewLinks.innerHTML = "";
 
-  // Ensure buttonData is an array
-  if (!Array.isArray(buttonData)) {
-    console.error("Invalid button data:", buttonData);
+  // Ensure btnArray is an array
+  if (!Array.isArray(btnArray)) {
+    console.error("Invalid button data:", btnArray);
     return;
   }
 
-  // Get style information
-  const buttonStyle = styleData.buttonStyle?.shape || "standard";
-  const buttonColor = styleData.buttonStyle?.color || "#007bff";
-
-  // Sort buttons by position
-  const sortedButtons = buttonData.sort(
-    (a, b) => parseInt(a.button_position) - parseInt(b.button_position)
+  // Sort buttons by position if needed
+  btnArray.sort(
+    (a, b) => Number(a.button_position) - Number(b.button_position)
   );
 
-  for (const button of sortedButtons) {
+  for (const button of btnArray) {
     if (!button || !button.button_name) {
       console.warn("Skipping invalid button:", button);
       continue;
     }
 
     try {
-      // Fetch long URL for the short link
-      const response = await fetch(`/shortlink/${button.id_shortlink}`);
-      if (!response.ok) {
-        throw new Error(`Failed to fetch long URL for ${button.id_shortlink}`);
+      // Default URL using shortlink
+      let longUrl = `http://localhost:8000/${button.id_shortlink}`;
+
+      // Try to resolve shortlink if API is available
+      try {
+        const response = await fetch(`/shortlink/${button.id_shortlink}`);
+        if (response.ok) {
+          const shortlinkData = await response.json();
+          if (shortlinkData.long_url) {
+            longUrl = shortlinkData.long_url;
+          }
+        }
+      } catch (error) {
+        console.warn(
+          `Failed to fetch shortlink for ${button.id_shortlink}, using default URL:`,
+          error
+        );
       }
 
-      const shortlinkData = await response.json();
-
       const previewLink = document.createElement("a");
-      previewLink.href = shortlinkData.long_url || "#";
+      previewLink.href = longUrl;
       previewLink.className = "preview-link";
       previewLink.innerText = button.button_name;
 
-      // Apply styles immediately
-      applyButtonStyle(previewLink, buttonStyle);
-      previewLink.style.backgroundColor = buttonColor;
+      // Apply default styles
+      applyButtonStyle(previewLink, "standard");
+      previewLink.style.backgroundColor = "#007bff";
 
-      // Make sure the link is clickable
       previewLink.style.cursor = "pointer";
-      previewLink.target = "_blank"; // Open in new tab
-
-      // Add data attributes for tracking
-      previewLink.setAttribute("data-button-style", buttonStyle);
-      previewLink.setAttribute("data-button-color", buttonColor);
-      previewLink.setAttribute("data-shortlink-id", button.id_shortlink);
+      previewLink.target = "_blank";
 
       previewLinks.appendChild(previewLink);
     } catch (error) {
