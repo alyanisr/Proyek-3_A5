@@ -82,12 +82,20 @@ function saveLink() {
     return;
   }
 
-  // Prepare link data with optional shortlink
+  // Generete unique shortlink ID
+  const buttonPosition = index === "" ? links.length : parseInt(index);
+  const shortlinkId = `(${title.toLowerCase()},${buttonPosition},${idLinktree},${generateRandomString(
+    4
+  )})`;
+
+  // Prepare link data with complete shortlink information
   const linkData = {
-    title: title,
-    url: url,
+    button_name: title,
+    button_position: buttonPosition.toString(),
+    long_url: url,
+    id_shortlink: shortlinkId,
+
     short: title.toLowerCase().replace(/\s+/g, "-").slice(0, 10),
-    id_shortlink: null, // Will be generated/assigned later
   };
 
   if (index === "") {
@@ -111,6 +119,17 @@ function saveLink() {
 
   linkModal.hide();
   form.reset();
+}
+
+// Helper function to generate random string
+function generateRandomString(length) {
+  const characters =
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+  let result = "";
+  for (let i = 0; i < length; i++) {
+    result += characters.charAt(Math.floor(Math.random() * characters.length));
+  }
+  return result;
 }
 
 function clearLocalStorageIfNeeded() {
@@ -237,15 +256,29 @@ async function loadDesignData() {
       );
     }
 
-    // More detailed font and style application
+    // Initialize fonts with active font from database
     if (data.style.font) {
-      await changeFont(data.style.font.family || "Inter");
+      const fontFamily = data.style.font.family || "Inter";
       const fontColor = data.style.font.color || "#000000";
+
+      // Initialize font options
+      initializeFonts(fontFamily);
+
+      // Apply font and color
+      changeFont(fontFamily, fontColor);
+
+      // Update color picker
+      const fontColorPicker = document.getElementById("fontColorPicker");
+      if (fontColorPicker) {
+        fontColorPicker.value = fontColor;
+      }
+    }
+
+    if (data.style && data.style.font && data.style.font.color) {
+      const fontColor = data.style.font.color;
+      changeFontColor(fontColor);
       const fontColorPicker = document.getElementById("fontColorPicker");
       if (fontColorPicker) fontColorPicker.value = fontColor;
-
-      const previewContent = document.getElementById("previewContent");
-      if (previewContent) previewContent.style.color = fontColor;
     }
 
     // Button style application
@@ -414,7 +447,7 @@ async function fetchLinktreeData() {
   }
 }
 
-async function renderButtons(btnArray = []) {
+async function renderButtons(buttonData = [], styleData = {}) {
   const previewLinks = document.getElementById("previewLinks");
   if (!previewLinks) {
     console.error("Preview links container not found!");
@@ -424,54 +457,77 @@ async function renderButtons(btnArray = []) {
   // Clear existing buttons first
   previewLinks.innerHTML = "";
 
-  // Ensure btnArray is an array
-  if (!Array.isArray(btnArray)) {
-    console.error("Invalid button data:", btnArray);
-    return;
+  // Ensure buttonData is an array
+  if (!Array.isArray(buttonData)) {
+    buttonData = [buttonData]; // Convert single object to array
   }
 
-  // Sort buttons by position if needed
-  btnArray.sort(
-    (a, b) => Number(a.button_position) - Number(b.button_position)
-  );
+  // Extract style information
+  const buttonStyle = styleData?.buttonStyle || {
+    shape: "standard",
+    color: "#007bff",
+  };
 
-  for (const button of btnArray) {
-    if (!button || !button.button_name) {
-      console.warn("Skipping invalid button:", button);
+  const fontStyle = styleData?.font || {
+    family: "Inter",
+    color: "#000000",
+  };
+
+  for (const link of buttonData) {
+    if (!link || !link.button_name) {
+      console.warn("Skipping invalid link:", link);
       continue;
     }
 
     try {
-      // Default URL using shortlink
-      let longUrl = `http://localhost:8000/${button.id_shortlink}`;
-
-      // Try to resolve shortlink if API is available
-      try {
-        const response = await fetch(`/shortlink/${button.id_shortlink}`);
-        if (response.ok) {
-          const shortlinkData = await response.json();
-          if (shortlinkData.long_url) {
-            longUrl = shortlinkData.long_url;
-          }
-        }
-      } catch (error) {
-        console.warn(
-          `Failed to fetch shortlink for ${button.id_shortlink}, using default URL:`,
-          error
-        );
-      }
+      // Use long_url directly if provided
+      let longUrl =
+        link.long_url ||
+        (link.id_shortlink
+          ? `http://localhost:8000/${link.id_shortlink}`
+          : "#");
 
       const previewLink = document.createElement("a");
       previewLink.href = longUrl;
       previewLink.className = "preview-link";
-      previewLink.innerText = button.button_name;
+      previewLink.innerText = link.button_name || "Link";
 
-      // Apply default styles
-      applyButtonStyle(previewLink, "standard");
-      previewLink.style.backgroundColor = "#007bff";
+      // Apply button styles
+      applyButtonStyle(previewLink, buttonStyle.shape || "standard");
+      previewLink.style.backgroundColor = buttonStyle.color || "#007bff";
 
+      // Apply font styles
+      previewLink.style.fontFamily = fontStyle.family || "Inter";
+      previewLink.style.color = fontStyle.color || "#000000";
+
+      // Additional styling
       previewLink.style.cursor = "pointer";
       previewLink.target = "_blank";
+      previewLink.style.textDecoration = "none";
+      previewLink.style.display = "block";
+      previewLink.style.margin = "10px 0";
+      previewLink.style.padding = "10px 20px";
+      previewLink.style.textAlign = "center";
+      previewLink.style.transition = "all 0.3s ease";
+
+      // Add hover effect
+      previewLink.onmouseover = function () {
+        this.style.opacity = "0.8";
+      };
+      previewLink.onmouseout = function () {
+        this.style.opacity = "1";
+      };
+
+      // Store additional attributes
+      previewLink.setAttribute("data-button-name", link.button_name);
+      previewLink.setAttribute("data-button-position", link.button_position);
+      previewLink.setAttribute("data-id-shortlink", link.id_shortlink);
+
+      // Store style data as attributes for tracking
+      previewLink.setAttribute("data-button-style", buttonStyle.shape);
+      previewLink.setAttribute("data-button-color", buttonStyle.color);
+      previewLink.setAttribute("data-font-family", fontStyle.family);
+      previewLink.setAttribute("data-font-color", fontStyle.color);
 
       previewLinks.appendChild(previewLink);
     } catch (error) {
@@ -487,15 +543,39 @@ document.addEventListener("DOMContentLoaded", fetchLinktreeData);
 const titleInput = document.getElementById("titleInput");
 const bioInput = document.getElementById("bioInput");
 const previewUsername = document.getElementById("previewUsername");
+const fontColorPicker = document.getElementById("fontColorPicker");
 
-// Update display name in preview
-titleInput.addEventListener("input", function () {
-  previewUsername.textContent = this.value || "@username";
+// Function to update all preview text colors
+function updatePreviewTextColors(color) {
+  const previewContent = document.getElementById("previewContent");
+  const previewUsername = document.getElementById("previewUsername");
+  const previewBio = document.getElementById("previewBio");
+  const previewElements = [previewContent, previewUsername, previewBio];
+
+  previewElements.forEach((element) => {
+    if (element) {
+      element.style.color = color;
+    }
+  });
+}
+
+// Update font color when color picker changes
+fontColorPicker.addEventListener("input", function (e) {
+  updatePreviewTextColors(e.target.value);
 });
 
-// Update bio in preview
+// Update display name in preview with current font color
+titleInput.addEventListener("input", function () {
+  const currentColor = fontColorPicker.value || "#000000";
+  previewUsername.textContent = this.value || "@username";
+  previewUsername.style.color = currentColor;
+});
+
+// Update bio in preview with current font color
 bioInput.addEventListener("input", function () {
+  const currentColor = fontColorPicker.value || "#000000";
   let previewBio = document.getElementById("previewBio");
+
   if (!previewBio) {
     previewBio = document.createElement("p");
     previewBio.id = "previewBio";
@@ -505,23 +585,10 @@ bioInput.addEventListener("input", function () {
       previewUsername.nextSibling
     );
   }
+
   previewBio.textContent = this.value;
+  previewBio.style.color = currentColor;
 });
-
-// Optional: Ensure color persists when dynamically adding content
-function ensurePreviewColorConsistency(color) {
-  // This function can be called after any dynamic content changes
-  const previewUsername = document.getElementById("previewUsername");
-  const previewBio = document.getElementById("previewBio");
-
-  if (previewUsername) {
-    previewUsername.style.color = color;
-  }
-
-  if (previewBio) {
-    previewBio.style.color = color;
-  }
-}
 
 // Image handling
 function showImageOptions() {
@@ -586,13 +653,21 @@ const fonts = [
 ];
 
 // Initialize font options
-function initializeFonts() {
+function initializeFonts(activeFont = "Inter") {
   const fontContainer = document.querySelector(".font-options");
+  if (!fontContainer) {
+    console.error("Font container not found");
+    return;
+  }
+
   fontContainer.innerHTML = "";
 
   fonts.forEach((font) => {
     const fontOption = document.createElement("div");
     fontOption.className = "font-option";
+    if (font === activeFont) {
+      fontOption.classList.add("active");
+    }
     fontOption.textContent = font;
     fontOption.style.fontFamily = font;
     fontOption.onclick = () => changeFont(font);
@@ -600,9 +675,27 @@ function initializeFonts() {
   });
 }
 
+function initializeFontColor() {
+  const fontColorPicker = document.getElementById("fontColorPicker");
+  if (fontColorPicker) {
+    const initialColor = fontColorPicker.value || "#000000";
+    const previewUsername = document.getElementById("previewUsername");
+    const previewBio = document.getElementById("previewBio");
+
+    if (previewUsername) {
+      previewUsername.style.color = initialColor;
+    }
+    if (previewBio) {
+      previewBio.style.color = initialColor;
+    }
+  }
+}
+
 // Change font for preview content
-function changeFont(fontFamily) {
-  // Remove active class from all font options
+function changeFont(fontFamily, fontColor = null) {
+  if (!fontFamily) return;
+
+  // Update font options UI
   document.querySelectorAll(".font-option").forEach((option) => {
     option.classList.remove("active");
     if (option.textContent === fontFamily) {
@@ -614,25 +707,89 @@ function changeFont(fontFamily) {
   const previewContent = document.getElementById("previewContent");
   if (previewContent) {
     previewContent.style.fontFamily = fontFamily;
+
+    // Apply to specific elements within preview
+    const previewUsername = document.getElementById("previewUsername");
+    const previewBio = document.getElementById("previewBio");
+    const previewLinks = document.querySelectorAll(".preview-link");
+
+    if (previewUsername) previewUsername.style.fontFamily = fontFamily;
+    if (previewBio) previewBio.style.fontFamily = fontFamily;
+
+    previewLinks.forEach((link) => {
+      link.style.fontFamily = fontFamily;
+    });
+  }
+
+  // Apply font color if provided
+  if (fontColor) {
+    changeFontColor(fontColor);
   }
 }
 
-// Change font color
-function changeFont(fontFamily) {
-  if (!fontFamily) return; // Prevent empty value override
+// Change font color function
+function changeFontColor(color) {
+  if (!color) return;
 
-  document.querySelectorAll(".font-option").forEach((option) => {
-    option.classList.remove("active");
-    if (option.textContent === fontFamily) {
-      option.classList.add("active");
-    }
-  });
+  // Update color picker value
+  const fontColorPicker = document.getElementById("fontColorPicker");
+  if (fontColorPicker) {
+    fontColorPicker.value = color;
+  }
 
+  // Apply color to preview elements
+  const previewUsername = document.getElementById("previewUsername");
+  const previewBio = document.getElementById("previewBio");
+  const previewLinks = document.querySelectorAll(".preview-link");
   const previewContent = document.getElementById("previewContent");
-  if (previewContent) {
-    previewContent.style.fontFamily = fontFamily;
+
+  // Pastikan warna dapat diterapkan bahkan jika elemen belum ada
+  if (!previewUsername) {
+    console.warn("previewUsername not found");
   }
+  if (!previewBio) {
+    console.warn("previewBio not found");
+  }
+
+  if (previewUsername) previewUsername.style.color = color;
+  if (previewBio) previewBio.style.color = color;
+  if (previewContent) {
+    // Pastikan semua teks di dalam previewContent mengikuti warna yang sama
+    const textElements = previewContent.querySelectorAll(
+      "*:not(.preview-link)"
+    );
+    textElements.forEach((element) => {
+      element.style.color = color;
+    });
+  }
+
+  previewLinks.forEach((link) => {
+    link.style.color = color;
+  });
 }
+
+// Tambahkan fungsi untuk memastikan konsistensi warna
+function ensureColorConsistency(color) {
+  const previewUsername = document.getElementById("previewUsername");
+  const previewBio = document.getElementById("previewBio");
+  const previewLinks = document.querySelectorAll(".preview-link");
+
+  if (previewUsername) previewUsername.style.color = color;
+  if (previewBio) previewBio.style.color = color;
+  previewLinks.forEach((link) => (link.style.color = color));
+}
+
+// Modifikasi event listener untuk color picker
+document.addEventListener("DOMContentLoaded", () => {
+  const fontColorPicker = document.getElementById("fontColorPicker");
+  if (fontColorPicker) {
+    fontColorPicker.addEventListener("input", (e) => {
+      const color = e.target.value;
+      changeFontColor(color);
+      ensureColorConsistency(color);
+    });
+  }
+});
 
 // Button style management
 function changeButtonStyle(style) {
