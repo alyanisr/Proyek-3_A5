@@ -693,9 +693,11 @@ function initializeFontColor() {
 
 // Change font for preview content
 function changeFont(fontFamily, fontColor = null) {
-  if (!fontFamily) return;
+  if (!fontFamily) return; // Prevent empty value override
+  console.log("changeFont called with font:", fontFamily);
+  console.log("Font color picker:", document.getElementById("fontColorPicker"));
 
-  // Update font options UI
+  // Update font options active state
   document.querySelectorAll(".font-option").forEach((option) => {
     option.classList.remove("active");
     if (option.textContent === fontFamily) {
@@ -703,29 +705,45 @@ function changeFont(fontFamily, fontColor = null) {
     }
   });
 
-  // Apply font to preview content
-  const previewContent = document.getElementById("previewContent");
+  const previewUsername = document.getElementById("previewUsername");
+  const previewBio = document.getElementById("previewBio");
+  const fontColorPicker = document.getElementById("fontColorPicker");
+
   if (previewContent) {
     previewContent.style.fontFamily = fontFamily;
-
-    // Apply to specific elements within preview
-    const previewUsername = document.getElementById("previewUsername");
-    const previewBio = document.getElementById("previewBio");
-    const previewLinks = document.querySelectorAll(".preview-link");
-
-    if (previewUsername) previewUsername.style.fontFamily = fontFamily;
-    if (previewBio) previewBio.style.fontFamily = fontFamily;
-
-    previewLinks.forEach((link) => {
-      link.style.fontFamily = fontFamily;
-    });
   }
 
-  // Apply font color if provided
-  if (fontColor) {
-    changeFontColor(fontColor);
+  // Apply font color if provided, otherwise use the color picker value
+  const color =
+    fontColor || (fontColorPicker ? fontColorPicker.value : "#000000");
+
+  console.log("Selected color:", color);
+
+  if (previewUsername) {
+    console.log("Updating username color");
+    previewUsername.style.color = color;
   }
+  if (previewBio) previewBio.style.color = color;
+  if (previewContent) previewContent.style.color = color;
 }
+
+// Modify font color picker event listener
+document.addEventListener("DOMContentLoaded", () => {
+  const fontColorPicker = document.getElementById("fontColorPicker");
+  if (fontColorPicker) {
+    console.log("Font color picker event listener added");
+    fontColorPicker.addEventListener("input", function () {
+      console.log("Font color changed to:", this.value);
+      const activeFontOption = document.querySelector(".font-option.active");
+      const currentFont = activeFontOption
+        ? activeFontOption.textContent
+        : "Inter";
+      changeFont(currentFont);
+    });
+  } else {
+    console.error("Font color picker not found!");
+  }
+});
 
 // Change font color function
 function changeFontColor(color) {
@@ -767,29 +785,6 @@ function changeFontColor(color) {
     link.style.color = color;
   });
 }
-
-// Tambahkan fungsi untuk memastikan konsistensi warna
-function ensureColorConsistency(color) {
-  const previewUsername = document.getElementById("previewUsername");
-  const previewBio = document.getElementById("previewBio");
-  const previewLinks = document.querySelectorAll(".preview-link");
-
-  if (previewUsername) previewUsername.style.color = color;
-  if (previewBio) previewBio.style.color = color;
-  previewLinks.forEach((link) => (link.style.color = color));
-}
-
-// Modifikasi event listener untuk color picker
-document.addEventListener("DOMContentLoaded", () => {
-  const fontColorPicker = document.getElementById("fontColorPicker");
-  if (fontColorPicker) {
-    fontColorPicker.addEventListener("input", (e) => {
-      const color = e.target.value;
-      changeFontColor(color);
-      ensureColorConsistency(color);
-    });
-  }
-});
 
 // Button style management
 function changeButtonStyle(style) {
