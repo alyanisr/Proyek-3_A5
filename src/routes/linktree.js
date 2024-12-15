@@ -18,4 +18,6 @@ routerLinktree.route("/delete/:id").delete(linktreeController.deleteLinktree);
 
 routerLinktree.route("/edit-url").patch(linktreeController.editLinktreeURL);
 
+routerLinktree.route("/history").get(linktreeController.getLinktreeHistory);
+
 export default routerLinktree;

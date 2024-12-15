@@ -230,6 +230,32 @@ const linktreeRoomEdit = async (req, res) => {
   }
 };
 
+const getLinktreeHistory = async (req, res) => {
+  try {
+    const result = await Linktree.getHistory(req.session.email);
+    if (result.rowCount === 0) {
+      res.status(404).send({
+        msg: "Linktree tidak ditemukan!",
+      });
+      return;
+    } else if (result.rows[0]["email"] != req.session.email) {
+      res.status(403).send({
+        msg: "Forbidden",
+      });
+      return;
+    }
+
+    res.status(200).send({
+      historyArray: result.rows
+    });
+  } catch (e) {
+    console.error("Terjadi error saat menampilkan linktree history:", e);
+    res.status(500).send({
+      msg: "Terjadi kesalahan server",
+    });
+  }
+};
+
 export default {
   linktreeMenu,
   createRoom,
@@ -239,4 +265,5 @@ export default {
   linktreeRoomEdit,
   deleteLinktree,
   editLinktreeURL,
+  getLinktreeHistory
 };
