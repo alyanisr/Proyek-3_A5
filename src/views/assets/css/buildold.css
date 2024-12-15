@@ -5,7 +5,7 @@
   border-radius: 30px;
   overflow: hidden;
   position: fixed;
-  right: 100px; /* Geser lebih ke kiri */
+  right: 150px; /* Geser lebih ke kiri */
   top: 50%;
   transform: translateY(-50%);
 }
@@ -94,8 +94,8 @@
 
 .save-changes-btn {
   position: fixed;
-  top: 10px;
-  right: 20px;
+  top: 20px;
+  right: 45px;
   padding: 10px 20px;
   background-color: #4caf50;
   color: white;
@@ -405,9 +405,9 @@
 
 .edit-url-btn {
   position: fixed;
-  bottom: 50px;
-  left: 90px; /* Adjust this to position it to the left of Save Changes */
-  background-color: #6c757d; /* Similar to a secondary button */
+  top: 20px; /* Mengubah dari bottom ke top */
+  right: 210px; /* Mengubah dari left ke right */
+  background-color: #6c757d;
   color: white;
   border: none;
   border-radius: 5px;
