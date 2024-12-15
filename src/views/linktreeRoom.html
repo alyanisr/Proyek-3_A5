@@ -3,14 +3,21 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Linktree Room</title>
+    <title>Dynamic Linktree</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <style id="dynamic-styles"></style>
+    <style>
+      .social-link {
+        transition: transform 0.3s ease, background 0.3s ease;
+      }
+      .social-link:hover {
+        transform: scale(1.05);
+      }
+    </style>
   </head>
   <body class="min-h-screen flex items-center justify-center">
     <div
       id="linktree-container"
-      class="w-full max-w-md p-6 rounded-lg shadow-md text-center relative"
+      class="w-full max-w-md p-6 rounded-lg shadow-md text-center relative bg-white bg-opacity-90"
     >
       <div
         id="debug-info"
@@ -19,7 +26,7 @@
 
       <img
         id="profile-image"
-        src="/api/placeholder/120/120"
+        src="https://placehold.co/120x120"
         alt="Profile"
         class="mx-auto mb-4 rounded-full w-30 h-30"
       />
@@ -28,61 +35,105 @@
 
       <p id="linktree-bio" class="mb-4 text-gray-600"></p>
 
-      <div id="linktree-buttons" class="space-y-4">
-        <!-- Buttons will be dynamically inserted here -->
+      <div id="social-links" class="space-y-4">
+        <!-- Social links will be dynamically inserted here -->
       </div>
 
       <div class="watermark mt-6 text-sm text-gray-400">plb.sh</div>
     </div>
 
     <script>
-      // Utility function to decode base64 image
-      function decodeBase64Image(base64String) {
-        // Check if the string is already a data URL
-        if (base64String.startsWith("data:")) {
-          return base64String;
-        }
-
-        // If it's a raw base64 string, convert to data URL
-        return `data:image/jpeg;base64,${base64String}`;
-      }
-
-      // Debug logging function
+      // Debug logging function - dipindah ke atas agar tersedia untuk semua fungsi
       function logDebug(message) {
         const debugElement = document.getElementById("debug-info");
         debugElement.textContent += message + "\n";
         console.log(message);
       }
 
-      // Theme and styling helpers
-      function applyTheme(theme) {
-        const container = document.getElementById("linktree-container");
-
-        logDebug(`Theme Type: ${theme.type}`);
-        logDebug(`Theme Value: ${JSON.stringify(theme.value)}`);
-
-        // Reset styles
-        container.style.background = "";
-        container.style.backgroundImage = "";
-        container.style.backgroundColor = "";
-        container.style.backgroundSize = "cover";
-        container.style.backgroundPosition = "center";
-
-        // Apply theme based on type
+      // Utility function to decode and optimize base64 image
+      async function processBase64Image(base64String, maxWidth = 800) {
         try {
+          // Check if already a data URL
+          if (base64String.startsWith("data:")) {
+            base64String = base64String.split(",")[1];
+          }
+
+          // Create an image from base64
+          const img = new Image();
+          img.src = `data:image/jpeg;base64,${base64String}`;
+
+          return new Promise((resolve, reject) => {
+            img.onload = () => {
+              try {
+                const canvas = document.createElement("canvas");
+                let width = img.width;
+                let height = img.height;
+
+                // Calculate new dimensions
+                if (width > maxWidth) {
+                  height = (height * maxWidth) / width;
+                  width = maxWidth;
+                }
+
+                canvas.width = width;
+                canvas.height = height;
+
+                const ctx = canvas.getContext("2d");
+                ctx.drawImage(img, 0, 0, width, height);
+
+                // Convert to optimized JPEG
+                resolve(canvas.toDataURL("image/jpeg", 0.85));
+              } catch (error) {
+                reject(error);
+              }
+            };
+            img.onerror = (error) => reject(error);
+          });
+        } catch (error) {
+          logDebug(`Error processing image: ${error.message}`);
+          return base64String; // Return original if processing fails
+        }
+      }
+
+      // Apply theme to body
+      async function applyTheme(theme) {
+        try {
+          const body = document.body;
+
+          logDebug(`Theme Type: ${theme.type}`);
+          logDebug(`Theme Value: ${JSON.stringify(theme.value)}`);
+
+          // Reset styles
+          body.style.background = "";
+          body.style.backgroundImage = "";
+          body.style.backgroundColor = "";
+          body.style.backgroundSize = "cover";
+          body.style.backgroundPosition = "center";
+
           switch (theme.type) {
-            case "solid-color":
-              container.style.backgroundColor = theme.value;
+            case "solid":
+              body.style.backgroundColor = theme.value;
               break;
-            case "gradient-color":
-              container.style.background = `linear-gradient(to right, ${theme.value.color1}, ${theme.value.color2})`;
+            case "gradient":
+              // Pastikan format gradient sesuai yang disimpan di database
+              const [color1, color2] = theme.value.split(",");
+              body.style.background = `linear-gradient(to right, ${color1.trim()}, ${color2.trim()})`;
               break;
-            case "background-image":
-              // Decode base64 image if needed
-              const backgroundImageUrl = decodeBase64Image(theme.value);
-              container.style.backgroundImage = `url('${backgroundImageUrl}')`;
-              container.style.backgroundSize = "cover";
-              container.style.backgroundPosition = "center";
+            case "image":
+              // Langsung gunakan path/URL gambar dari database
+              if (
+                theme.value.startsWith("/") ||
+                theme.value.startsWith("http")
+              ) {
+                // Jika path lokal atau URL lengkap
+                body.style.backgroundImage = `url('${theme.value}')`;
+              } else {
+                // Jika base64, gunakan fungsi processBase64Image
+                const optimizedImage = await processBase64Image(theme.value);
+                body.style.backgroundImage = `url('${optimizedImage}')`;
+              }
+              body.style.backgroundSize = "cover";
+              body.style.backgroundPosition = "center";
               break;
             default:
               logDebug(`Unknown theme type: ${theme.type}`);
@@ -92,43 +143,75 @@
         }
       }
 
-      function applyButtonStyles(buttonStyle) {
-        const buttonsContainer = document.getElementById("linktree-buttons");
-
-        logDebug(`Button Style Shape: ${buttonStyle.shape}`);
-        logDebug(`Button Style Color: ${buttonStyle.color}`);
-
-        const shapeStyles = {
-          standard: "rounded-md",
-          rounded: "rounded-full",
-          square: "rounded-none",
-        };
-
-        const shapeClass = shapeStyles[buttonStyle.shape] || "rounded-md";
-
-        buttonsContainer.querySelectorAll("a").forEach((button) => {
-          button.className = `block w-full py-3 ${shapeClass} text-white transition duration-300`;
-          button.style.backgroundColor = buttonStyle.color;
-        });
+      // Fungsi utilitas untuk menangani gambar
+      async function handleImageProcessing(imageValue) {
+        try {
+          // Cek apakah gambar adalah path/URL atau base64
+          if (imageValue.startsWith("/") || imageValue.startsWith("http")) {
+            // Jika path/URL langsung, kembalikan nilainya
+            return imageValue;
+          } else {
+            // Jika base64, proses dan optimalkan
+            return await processBase64Image(imageValue);
+          }
+        } catch (error) {
+          logDebug(`Error processing image: ${error.message}`);
+          return imageValue; // Kembalikan nilai asli jika gagal
+        }
       }
 
+      // Apply button styles
+      function applyButtonStyles(buttonStyle, fontColor) {
+        try {
+          const linksContainer = document.getElementById("social-links");
+
+          logDebug(`Button Style Shape: ${buttonStyle.shape}`);
+          logDebug(`Button Style Color: ${buttonStyle.color}`);
+
+          const shapeStyles = {
+            standard: "rounded-md",
+            rounded: "rounded-full",
+            square: "rounded-none",
+          };
+
+          const shapeClass = shapeStyles[buttonStyle.shape] || "rounded-md";
+
+          linksContainer.querySelectorAll("a").forEach((button) => {
+            button.className = `block w-full py-3 ${shapeClass} transition duration-300`;
+            button.style.backgroundColor = buttonStyle.color;
+            button.style.color = fontColor; // Use the same font color as title and bio
+          });
+        } catch (error) {
+          logDebug(`Error applying button styles: ${error.message}`);
+        }
+      }
+
+      // Apply font styles
       function applyFontStyles(fontStyle) {
-        logDebug(`Font Family: ${fontStyle.family}`);
-        logDebug(`Font Color: ${fontStyle.color}`);
+        try {
+          logDebug(`Font Family: ${fontStyle.family}`);
+          logDebug(`Font Color: ${fontStyle.color}`);
 
-        const titleElement = document.getElementById("linktree-title");
-        const bioElement = document.getElementById("linktree-bio");
+          const titleElement = document.getElementById("linktree-title");
+          const bioElement = document.getElementById("linktree-bio");
+          const container = document.getElementById("linktree-container");
 
-        // Apply font family
-        document.body.style.fontFamily =
-          fontStyle.family || "Inter, sans-serif";
+          // Apply font family
+          container.style.fontFamily = fontStyle.family || "Inter, sans-serif";
 
-        // Apply font color
-        titleElement.style.color = fontStyle.color || "#000000";
-        bioElement.style.color = fontStyle.color || "#000000";
+          // Apply font color
+          const fontColor = fontStyle.color || "#000000";
+          titleElement.style.color = fontColor;
+          bioElement.style.color = fontColor;
+
+          return fontColor; // Return for use in button styling
+        } catch (error) {
+          logDebug(`Error applying font styles: ${error.message}`);
+          return "#000000"; // Return default color if error occurs
+        }
       }
 
-      // Extract room ID from URL
+      // Extract room ID and initialize
       const urlParams = new URLSearchParams(window.location.search);
       const roomId = urlParams.get("id");
 
@@ -145,10 +228,14 @@
 
           logDebug(`Received Data: ${JSON.stringify(data)}`);
 
-          // Update profile image (decode base64)
-          const profileImage = document.getElementById("profile-image");
+          // Update profile image
           if (data.style.profileImage) {
-            profileImage.src = decodeBase64Image(data.style.profileImage);
+            const profileImage = document.getElementById("profile-image");
+            const optimizedProfileImage = await processBase64Image(
+              data.style.profileImage,
+              240
+            );
+            profileImage.src = optimizedProfileImage;
           }
 
           // Update title and bio
@@ -157,33 +244,51 @@
           titleElement.textContent = data.title || "Linktree";
           bioElement.textContent = data.bio || "";
 
-          // Create buttons
-          const buttonsContainer = document.getElementById("linktree-buttons");
-          buttonsContainer.innerHTML = ""; // Clear loading state
+          // Create social links
+          const linksContainer = document.getElementById("social-links");
+          linksContainer.innerHTML = "";
 
-          data.btnArray.forEach((link) => {
+          const sortedLinks = data.btnArray.sort(
+            (a, b) => parseInt(a.button_position) - parseInt(b.button_position)
+          );
+
+          // Apply theme first
+          if (data.style.theme) {
+            await applyTheme(data.style.theme);
+          }
+
+          // Apply font styles and get the font color
+          const fontColor = data.style.font
+            ? applyFontStyles(data.style.font)
+            : "#000000";
+
+          // Create and style buttons
+          for (const link of sortedLinks) {
             const button = document.createElement("a");
-            // Use short_url for link, prefixed with base URL
-            button.href = `http://localhost:8000/${link.short}`;
-            button.textContent = link.name;
+            try {
+              const shortlinkResponse = await fetch(
+                `/api/shortlink/${link.id_shortlink}`
+              );
+              if (shortlinkResponse.ok) {
+                const shortlinkData = await shortlinkResponse.json();
+                button.href = shortlinkData.full_url;
+              } else {
+                button.href = `http://localhost:8000/${link.id_shortlink}`;
+              }
+            } catch (error) {
+              logDebug(`Error fetching shortlink: ${error.message}`);
+              button.href = `http://localhost:8000/${link.id_shortlink}`;
+            }
+
+            button.textContent = link.button_name;
             button.target = "_blank";
             button.rel = "noopener noreferrer";
-            buttonsContainer.appendChild(button);
-          });
-
-          // Apply theme
-          if (data.style.theme) {
-            applyTheme(data.style.theme);
+            linksContainer.appendChild(button);
           }
 
-          // Apply button styles
+          // Apply button styles with the font color
           if (data.style.buttonStyle) {
-            applyButtonStyles(data.style.buttonStyle);
-          }
-
-          // Apply font styles
-          if (data.style.font) {
-            applyFontStyles(data.style.font);
+            applyButtonStyles(data.style.buttonStyle, fontColor);
           }
         } catch (error) {
           logDebug(`Error fetching linktree data: ${error.message}`);
@@ -192,7 +297,7 @@
         }
       }
 
-      // Fetch data when page loads
+      // Initialize
       if (roomId) {
         fetchLinktreeData();
       } else {
@@ -201,136 +306,9 @@
         logDebug("No Room ID provided");
       }
 
-      // Function to initialize the Linktree page with saved configuration
-      async function initializeLinktreePage(data) {
-        // Function to fetch full URL for a shortlink
-        async function fetchShortlinkUrl(shortlinkId) {
-          try {
-            // Assuming an API endpoint to get full URL from shortlink ID
-            const response = await fetch(`/api/shortlink/${shortlinkId}`);
-            if (!response.ok) {
-              throw new Error("Failed to fetch shortlink URL");
-            }
-            const shortlinkData = await response.json();
-            return shortlinkData.full_url;
-          } catch (error) {
-            console.error("Error fetching shortlink:", error);
-            return `http://localhost:8000/${shortlinkId}`;
-          }
-        }
-
-        // Update page title and username
-        const linktreeTitle = document.getElementById("previewUsername");
-        linktreeTitle.textContent = data.title || "@username";
-
-        // Update profile image
-        const profileImage = document.getElementById("previewProfileImage");
-        if (data.style.profileImage) {
-          profileImage.src = data.style.profileImage;
-        }
-
-        // Update bio
-        const bioElement = document.getElementById("previewBio");
-        if (data.bio) {
-          bioElement.textContent = data.bio;
-        }
-
-        // Apply theme
-        const previewContent = document.getElementById("previewContent");
-        switch (data.style.theme.type) {
-          case "gradient":
-            previewContent.style.background = `linear-gradient(to bottom, ${data.style.theme.value.color1}, ${data.style.theme.value.color2})`;
-            break;
-          case "solid":
-            previewContent.style.backgroundColor = data.style.theme.value;
-            break;
-          case "image":
-            previewContent.style.backgroundImage = `url('${data.style.theme.value}')`;
-            previewContent.style.backgroundSize = "cover";
-            previewContent.style.backgroundPosition = "center";
-            break;
-        }
-
-        // Update font styles
-        previewContent.style.fontFamily = data.style.font.family;
-        previewContent.style.color = data.style.font.color;
-
-        // Create and add buttons
-        const previewLinks = document.getElementById("previewLinks");
-        previewLinks.innerHTML = ""; // Clear existing buttons
-
-        // Process buttons asynchronously
-        const buttonPromises = data.btnArray.map(async (btn) => {
-          const buttonElement = document.createElement("a");
-
-          // Fetch the full URL for the shortlink
-          const fullUrl = await fetchShortlinkUrl(btn.id_shortlink);
-
-          buttonElement.href = fullUrl;
-          buttonElement.textContent = btn.button_name;
-          buttonElement.className = "preview-link";
-
-          // Apply button style
-          buttonElement.style.backgroundColor = data.style.buttonStyle.color;
-          switch (data.style.buttonStyle.shape) {
-            case "rounded":
-              buttonElement.style.borderRadius = "25px";
-              break;
-            case "sharp":
-              buttonElement.style.borderRadius = "0";
-              break;
-            case "standard":
-            default:
-              buttonElement.style.borderRadius = "8px";
-              break;
-          }
-
-          previewLinks.appendChild(buttonElement);
-        });
-
-        // Wait for all buttons to be processed
-        await Promise.all(buttonPromises);
-      }
-
-      // Call the initialization function when the page loads
-      document.addEventListener("DOMContentLoaded", () => {
-        // Example usage with the received data
-        const receivedData = {
-          id: "QKaB",
-          title: "",
-          bio: "",
-          style: {
-            font: {
-              color: "#000000",
-              family: "Inter",
-            },
-            theme: {
-              type: "image",
-              value:
-                "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/4gHYSUNDX1BST0ZST0ZJTEUAAQEAAAHIAAAAAAQwAABtbnRyUkdCIFhZWiAH4AABAAEAAAAAAABhY3NwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAA9tYAAQAAAADTLQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAlkZXNjAAAA8AAAACRyWFlaAAABFAAAABRnWFlaAAABKAAAABRiWFlaAAABPAAAABR3dHB0AAABUAAAABRyVFJDAAABZAAAAChnVFJDAAABZAAAAChiVFJDAAABZAAAAChjcHJ0AAABjAAAADxtbHVjAAAAAAAAAAEAAAAMZW5VUwAAAAgAAAAcAHMAUgBHAEJYWVogAAAAAAAAb6IAADj1AAADkFhZWiAAAAAAAABimQAAt4UAABjaWFlaIAAAAAAAACSgAAAPhAAAts9YWVogAAAAAAAA9tYAAQAAAADTLXBhcmEAAAAAAAQAAAACZmYAAPKnAAANWQAAE9AAAApbAAAAAAAAAABtbHVjAAAAAAAAAAEAAAAMZW5VUwAAACAAAAAcAEcAbwBvAGcAbABlACAASQBuAGMALgAgADIAMAAxADb/2wBDABALDA4MChAODQ4SERATGCgaGBYWGDEjJR0oOjM9PDkzODdASFxOQERXRTc4UG1RV19iZ2hnPk1xeXBkeFxlZ2P/2wBDARESEhgVGC8aGi9jQjhCY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2P/wAARCAAmADIDASIAAhEBAxEB/8QAGwAAAgMBAQEAAAAAAAAAAAAAAAYCBAUDBwH/xAAvEAACAQMDAgUCBQUAAAAAAAABAgMABBEFEiExQQYTUWGBcaEUIjKRwSMzUrHw/8QAGAEAAwEBAAAAAAAAAAAAAAAAAAIDAQT/xAAaEQEBAQADAQAAAAAAAAAAAAABABECITED/9oADAMBAAIRAxEAPwC74eGnzoVi3bk7kYz7+1MAhgjXDqHz/lXlekXjWupQzMCFBGQB147e/PH19K9TjeKWFJiCqOoKgjnmtFfZcqN3b6WhNxIiqMYK9j8Uv3MdtKHmt32jd/aKnI+f9V1a4DarbxTDzpfNVXUrhEBPT1J57+neqGtTJY6o6ANg5w24txnGDnmtPrjDw0otGXGDz2FZOs6V+GgM+QCCMjI79Pmn3T9HgECzXJDO6hgnTb0/elrxqsANvDC3KgkrjJ+ufiqc+YnUvET2S6KntoqNS1NLvEtLtH3h0Ufob9J+oIx15/7NMNv4lvri7RXnidX/ACkBciP3wOTjGfpScHZs7iTx35rV8P8AmNqUMUZYLI4UsucgZByP2HNK9HVoazgLa0TVfMmvY973W5I4gWJOeAfQ5PcdB19M3XrUTXhe5dbaXOAr9GzzjOfX+OnSuD29y2v2lwqO0BmiIkzkdRn71DxRG9pqEYXfKASwZySQcKc1M1TZqnda3erPsE6vHA+1CACMDoffoKpajqEl+6yyyl2UFc4xx27e9GooTMWzhSF2qqkYG0fHQVzj0+Zo9xibpkZGB96fZMqJbk9KKkYiCRtaimi2F09DL/Tfy1HXjP8ANa+nadZx+YURy6OUYk4G4YzjHaiioq1MtZBsfcvDDuK+XEaXM/nTKrPjGSM/b4oopYubjiszVJPLgPHaiitPYlBpmLE+9FFFdFO//9k=",
-            },
-          },
-          buttonStyle: {
-            color: "#007bff",
-            shape: "standard",
-          },
-          profileImage: null,
-          btnArray: [
-            {
-              button_position: "0",
-              button_name: "claude",
-              id_shortlink: "KsXi",
-            },
-          ],
-          url: "http://localhost:8000/mirasa",
-        };
-
-        initializeLinktreePage(receivedData);
-      });
-
-      // Optional: Error handling for dynamic URL fetching
+      // Error handling
       window.addEventListener("unhandledrejection", (event) => {
-        console.error("Unhandled promise rejection:", event.reason);
+        logDebug(`Unhandled promise rejection: ${event.reason}`);
       });
     </script>
   </body>

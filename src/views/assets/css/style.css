@@ -50,6 +50,19 @@ body {
   margin-bottom: 2rem;
 }
 
+.logo-sidebar {
+  width: 50px; /* Adjust size as needed */
+  height: 50px; /* Adjust size as needed */
+  border-radius: 50%; /* Creates a perfectly circular shape */
+  object-fit: cover; /* Ensures the image fills the circle without distortion */
+  position: fixed; /* Or absolute, depending on your layout */
+  top: 15px; /* Adjust distance from top */
+  left: 15px; /* Adjust distance from left */
+  z-index: 1000; /* Ensures it stays on top of other elements */
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2); /* Optional: adds a subtle shadow */
+  cursor: pointer; /* Optional: changes cursor on hover */
+}
+
 .sidebar a {
   display: flex;
   align-items: center;
@@ -209,8 +222,8 @@ body {
 .frame .text-wrapper {
   position: relative;
   width: fit-content;
-  margin-left: -5.00px;
-  margin-right: -3.00px;
+  margin-left: -5px;
+  margin-right: -3px;
   font-family: "Inter-Medium", Helvetica;
   font-weight: 500;
   color: #000000;
@@ -230,7 +243,7 @@ body {
   color: #ffffff;
   font-size: 20px;
   text-align: center;
-  letter-spacing: -0.40px;
+  letter-spacing: -0.4px;
   line-height: normal;
 }
 
@@ -253,8 +266,8 @@ body {
 }
 
 .frame .text-wrapper-3 {
-  margin-left: -8.00px;
-  margin-right: -6.00px;
+  margin-left: -8px;
+  margin-right: -6px;
   position: relative;
   width: fit-content;
   font-family: "Inter-Medium", Helvetica;
@@ -286,8 +299,8 @@ body {
 }
 
 .frame .text-wrapper-4 {
-  margin-left: -3.00px;
-  margin-right: -1.00px;
+  margin-left: -3px;
+  margin-right: -1px;
   position: relative;
   width: fit-content;
   font-family: "Inter-Medium", Helvetica;
@@ -331,8 +344,8 @@ body {
 .frame .text-wrapper-5 {
   position: relative;
   width: fit-content;
-  margin-left: -3.50px;
-  margin-right: -1.50px;
+  margin-left: -3.5px;
+  margin-right: -1.5px;
   font-family: "Inter-Medium", Helvetica;
   font-weight: 500;
   color: #000000;
@@ -381,8 +394,8 @@ body {
 .frame .text-wrapper-6 {
   position: relative;
   width: fit-content;
-  margin-left: -2.50px;
-  margin-right: -0.50px;
+  margin-left: -2.5px;
+  margin-right: -0.5px;
   font-family: "Inter-Medium", Helvetica;
   font-weight: 500;
   color: #000000;
@@ -393,8 +406,8 @@ body {
 }
 
 .frame .text-wrapper-7 {
-  margin-left: -10.50px;
-  margin-right: -8.50px;
+  margin-left: -10.5px;
+  margin-right: -8.5px;
   position: relative;
   width: fit-content;
   font-family: "Inter-Medium", Helvetica;
