@@ -130,121 +130,173 @@
     <script>
       feather.replace(); // Initialize Feather icons
 
-      // Event listener for form submission
       document.addEventListener("DOMContentLoaded", () => {
         const form = document.getElementById("linktree-form");
         const historyList = document.getElementById("room-history-list");
 
-        // Fungsi untuk memuat history dari Local Storage
-        function loadHistoryFromLocalStorage() {
-          const rooms = JSON.parse(
-            localStorage.getItem("linkTreeRooms") || "[]"
-          );
-          rooms.forEach((room) => {
-            addRoomToHistory(room);
-          });
-        }
-
-        // Fungsi untuk menyimpan room ke Local Storage
-        function saveRoomToLocalStorage(room) {
-          const rooms = JSON.parse(
-            localStorage.getItem("linkTreeRooms") || "[]"
-          );
-          rooms.unshift(room);
-          // Batasi jumlah room yang disimpan misalnya menjadi 10
-          localStorage.setItem(
-            "linkTreeRooms",
-            JSON.stringify(rooms.slice(0, 10))
-          );
-        }
-
-        // Panggil fungsi load history saat halaman dimuat
-        loadHistoryFromLocalStorage();
-
         function addRoomToHistory(room) {
+
           const historyItem = document.createElement("div");
           historyItem.classList.add("history-item");
           historyItem.innerHTML = `
-      <i data-feather="link-2"></i>
-      <div class="link-details">
-        <a href="https://plb.sh/${room.customUrl}">plb.sh/${room.customUrl}</a>
-        <p><i data-feather="calendar"></i> ${
-          room.createdAt ||
-          new Date().toLocaleDateString("id-ID", {
-            day: "numeric",
-            month: "long",
-            year: "numeric",
-          })
-        }</p>
-      </div>
-      <div class="actions">
-        <button onclick="copyToClipboard('https://plb.sh/${room.customUrl}')">
-          <i data-feather="copy"></i> Copy
-        </button>
-        <button onclick="shareRoom('https://plb.sh/${room.customUrl}')">
-          <i data-feather="share-2"></i> Share
-        </button>
-        <button onclick="editRoom('${room.customUrl}')">
-          <i data-feather="edit"></i> Edit
-        </button>
-        <button onclick="deleteRoom('${room.customUrl}')">
-          <i data-feather="trash-2"></i> Delete
-        </button>
-      </div>
-    `;
+          <i data-feather="link-2"></i>
+          <div class="link-details">
+            <a href="https://plb.sh/${room.linktree_url}">plb.sh/${
+            room.linktree_url
+          }</a>
+            <p><i data-feather="calendar"></i> ${
+              room.time_linktree_last_updated ||
+              new Date().toLocaleDateString("id-ID", {
+                day: "numeric",
+                month: "long",
+                year: "numeric",
+              })
+            }</p>
+          </div>
+          <div class="actions">
+            <button onclick="copyToClipboard('https://plb.sh/${
+              room.linktree_url
+            }')">
+              <i data-feather="copy"></i> Copy
+            </button>
+            <button onclick="shareRoom('https://plb.sh/${room.linktree_url}')">
+              <i data-feather="share-2"></i> Share
+            </button>
+            <button class="edit-button" data-id="${room.id_linktree}">
+              <i data-feather="edit"></i> Edit
+            </button>
+            <button onclick="deleteRoom('${room.linktree_url}')">
+              <i data-feather="trash-2"></i> Delete
+            </button>
+          </div>
+        `;
 
-          historyList.insertBefore(historyItem, historyList.firstChild);
-          feather.replace(); // Refresh feather icons
+          // Add item to the list
+          historyList.appendChild(historyItem);
+
+          // Add event listener for Edit button
+          const editButton = historyItem.querySelector(".edit-button");
+          editButton.addEventListener("click", () => {
+            const roomId = editButton.getAttribute("data-id");
+            console.log("Edit Button Clicked - Room ID:", roomId);
+
+            if (roomId) {
+              window.location.href = `http://localhost:8000/linktree/room-edit?id=${roomId}`;
+            } else {
+              console.error("No valid ID found for room:", room);
+              alert("Unable to edit room: No identifier found.");
+            }
+          });
+
+          // Refresh Feather icons
+          feather.replace();
         }
 
-        // Fungsi copy to clipboard
-        window.copyToClipboard = (url) => {
-          navigator.clipboard.writeText(url).then(() => {
-            alert("Link copied!");
-          });
-        };
+        // // Fungsi untuk memuat history dari Local Storage
+        // function loadHistoryFromLocalStorage() {
+        //   const rooms = JSON.parse(
+        //     localStorage.getItem("linkTreeRooms") || "[]"
+        //   );
+        //   rooms.forEach((room) => {
+        //     addRoomToHistory(room);
+        //   });
+        // }
 
-        // Fungsi share
-        window.shareRoom = (url) => {
-          if (navigator.share) {
-            navigator.share({
-              title: "My LinkTree Room",
-              url: url,
+        // // Fungsi untuk menyimpan room ke Local Storage
+        // function saveRoomToLocalStorage(room) {
+        //   const rooms = JSON.parse(
+        //     localStorage.getItem("linkTreeRooms") || "[]"
+        //   );
+        //   rooms.unshift(room);
+        //   // Batasi jumlah room yang disimpan (misalnya, 10 terakhir)
+        //   localStorage.setItem(
+        //     "linkTreeRooms",
+        //     JSON.stringify(rooms.slice(0, 10))
+        //   );
+        // }
+
+        // // Panggil fungsi untuk memuat history saat halaman dimuat
+        // loadHistoryFromLocalStorage();
+
+        // Fungsi untuk memuat history dari API
+        async function fetchHistoryFromAPI() {
+          try {
+            const response = await fetch(
+              "http://localhost:8000/linktree/history"
+            );
+            const rooms = await response.json();
+            console.log("Parsed Rooms Data:", rooms);
+
+            if (!response.ok) {
+              throw new Error("Failed to fetch history");
+            }
+            const historyData = await response.json();
+
+            console.log("Full History Data:", historyData);
+
+            historyData.forEach((room, index) => {
+              console.log(`Room ${index + 1} Details:`, room);
+              console.log(
+                `ID_Linktree for Room ${index + 1}:`,
+                room.id_linktree
+              ); // Log ID for each room
+
+              // Additional checks
+              if (!room.id_linktree) {
+                console.warn("room.id_linktree is undefined for:", room);
+              }
+
+              addRoomToHistory(room);
             });
-          } else {
-            alert("Sharing not supported");
+
+            feather.replace();
+          } catch (error) {
+            console.error("Error fetching history:", error);
+            alert("Failed to load history. Check API connection.");
           }
-        };
+        }
 
-        // Tambahkan fungsi edit dan delete placeholder
-        window.editRoom = (customUrl) => {
-          alert(`Editing room: ${customUrl}`);
-        };
+        // Panggil fungsi setelah halaman dimuat
+        document.addEventListener("DOMContentLoaded", () => {
+          fetchHistoryFromAPI();
+        });
 
-        // Tambahkan di dalam event listener atau sebagai fungsi global
-        window.deleteRoom = (customUrl) => {
-          const rooms = JSON.parse(
-            localStorage.getItem("linkTreeRooms") || "[]"
-          );
-          const updatedRooms = rooms.filter(
-            (room) => room.customUrl !== customUrl
-          );
+        // Fungsi untuk memuat history dari backend
+        async function loadHistoryFromBackend() {
+          try {
+            console.log("Fetching history..."); // Logging untuk memastikan fetch dipanggil
+            const response = await fetch(
+              "http://localhost:8000/linktree/history"
+            );
 
-          localStorage.setItem("linkTreeRooms", JSON.stringify(updatedRooms));
+            if (!response.ok) {
+              throw new Error(`HTTP error! status: ${response.status}`);
+            }
 
-          // Hapus elemen dari DOM
-          const roomElement = document.querySelector(
-            `.history-item:has(a[href$="${customUrl}"])`
-          );
-          if (roomElement) {
-            roomElement.remove();
+            const rooms = await response.json();
+
+            // Tambahkan log di sini untuk memeriksa isi dan tipe `rooms`
+            console.log("Rooms data:", rooms);
+            console.log("Type of rooms:", typeof rooms);
+
+            // Validasi apakah `rooms` adalah array sebelum iterasi
+            if (rooms && Array.isArray(rooms.historyArray)) {
+              rooms.historyArray.forEach((room) => {
+                console.log("Room:", room);
+                addRoomToHistory(room);
+              });
+            } else {
+              console.error(
+                "rooms.historyArray is not an array or rooms is undefined"
+              );
+            }
+          } catch (error) {
+            console.error("Error loading history from backend:", error);
           }
+        }
 
-          // Kirim request ke backend untuk menghapus room
-          fetch(`http://localhost:8000/linktree/delete-room/${customUrl}`, {
-            method: "DELETE",
-          });
-        };
+        // Panggil fungsi untuk memuat data history saat halaman dimuat
+        loadHistoryFromBackend();
 
         form.addEventListener("submit", async (event) => {
           event.preventDefault();
@@ -265,32 +317,14 @@
             );
 
             if (response.ok) {
-              const roomData = {
-                title,
-                customUrl,
-                createdAt: new Date().toLocaleDateString("id-ID", {
-                  day: "numeric",
-                  month: "long",
-                  year: "numeric",
-                }),
-              };
-
-              // Simpan ke Local Storage
-              saveRoomToLocalStorage(roomData);
-
-              // Tambahkan room ke history
-              addRoomToHistory(roomData);
-
-              // Reset form
-              form.reset();
-
-              // Buka tab History
+              const roomData = await response.json(); // Ambil data dari respons backend
+              addRoomToHistory(roomData); // Tambahkan data baru ke UI
+              form.reset(); // Reset form
               document
                 .querySelector(
                   ".tablinks[onclick=\"openTab(event, 'History')\"]"
                 )
                 .click();
-
               // Redirect atau lakukan sesuatu setelah berhasil
               window.location.href = response.url;
             } else if (response.status === 400) {
@@ -304,6 +338,53 @@
           }
         });
       });
+
+      // Fungsi copy to clipboard
+      window.copyToClipboard = (url) => {
+        navigator.clipboard.writeText(url).then(() => {
+          alert("Link copied!");
+        });
+      };
+
+      // Fungsi share
+      window.shareRoom = (url) => {
+        if (navigator.share) {
+          navigator.share({
+            title: "My LinkTree Room",
+            url: url,
+          });
+        } else {
+          alert("Sharing not supported");
+        }
+      };
+
+      // Tambahkan fungsi edit dan delete placeholder
+      window.editRoom = (customUrl) => {
+        alert(`Editing room: ${customUrl}`);
+      };
+
+      // Tambahkan di dalam event listener atau sebagai fungsi global
+      window.deleteRoom = (customUrl) => {
+        const rooms = JSON.parse(localStorage.getItem("linkTreeRooms") || "[]");
+        const updatedRooms = rooms.filter(
+          (room) => room.customUrl !== customUrl
+        );
+
+        localStorage.setItem("linkTreeRooms", JSON.stringify(updatedRooms));
+
+        // Hapus elemen dari DOM
+        const roomElement = document.querySelector(
+          `.history-item:has(a[href$="${customUrl}"])`
+        );
+        if (roomElement) {
+          roomElement.remove();
+        }
+
+        // Kirim request ke backend untuk menghapus room
+        fetch(`http://localhost:8000/linktree/delete-room/${customUrl}`, {
+          method: "DELETE",
+        });
+      };
     </script>
   </body>
 </html>

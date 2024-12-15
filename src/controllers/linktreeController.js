@@ -238,13 +238,8 @@ const getLinktreeHistory = async (req, res) => {
         msg: "Linktree tidak ditemukan!",
       });
       return;
-    } else if (result.rows[0]["email"] != req.session.email) {
-      res.status(403).send({
-        msg: "Forbidden",
-      });
-      return;
     }
-
+    
     res.status(200).send({
       historyArray: result.rows
     });
