@@ -316,9 +316,8 @@ const generateQRext = async (req, res) => {
     // Send response with the QR code as a data URI
     const base64Image = outputBuffer.toString('base64');
     const mimeType = 'image/png';
-    res.json({ message: 'QR code generated successfully', url: `http://localhost:8000/tes/${namafile}.png` });
+    res.json({success : true, message: 'QR code generated successfully', url: `http://plbsh.polban.dev/tes/${namafile}.png` });
 
-    console.log(`QR code saved to ${filePath}`);
   } catch (error) {
     console.error('Error generating QR code:', error);
     res.status(500).json({ error: 'Failed to generate QR code' });
@@ -357,9 +356,27 @@ const getqrext = async (req, res) => {
 const updateqr = async (req,res) => {
   try {
     const { id } = req.params;
-    const { style } = req.body;
+    const { body } = req;
+    const email = req.session.email;
     
-    Qr.Update(style,id);
+    const ownershipCheck = await Qr.checkOwner(id, email);
+    if (!ownershipCheck.rows[0]?.exists) {
+      console.log('Unauthorized attempt to update QR code:', { id, email });
+      return res.status(403).json({
+        success: false,
+        error: 'You do not have permission to update this QR code',
+      });
+    }
+
+    const result = await Qr.Update(body,id);
+
+    if (result.rowCount === 0) {
+      console.log('QR code not found during deletion:', id);
+      return res.status(404).json({
+        success: false,
+        error: 'QR code not found',
+      });
+    }
     
     res.status(200).json({
       success: true,

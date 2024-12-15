@@ -6,16 +6,20 @@ document.addEventListener("DOMContentLoaded", () => {
   const idLinktree = urlParams.get("id");
 
   if (idLinktree) {
-    // Coba ambil data dari localStorage berdasarkan idLinktree
     const savedLinks = localStorage.getItem(idLinktree);
     if (savedLinks) {
       links = JSON.parse(savedLinks);
-      renderLinks(); // Ini akan sekaligus render linksList dan previewLinks
+      renderLinks();
     }
   }
 
-  // Muat data dari server sebagai cadangan
-  fetchLinktreeData();
+  // Add error handling and logging
+  try {
+    initializeBackgroundImages();
+    fetchLinktreeData();
+  } catch (error) {
+    console.error("Initialization error:", error);
+  }
 });
 
 // Show/Hide pages
@@ -135,49 +139,156 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 // Tambahkan fungsi untuk memuat ulang data dari database saat halaman dimuat
-function loadLinktreeData() {
+async function loadLinktreeData() {
   const urlParams = new URLSearchParams(window.location.search);
   const idLinktree = urlParams.get("id");
 
   if (!idLinktree) {
-    console.error("Tidak ada ID Linktree");
+    console.error("No Linktree ID found");
     return;
   }
 
-  // Cek localStorage terlebih dahulu
+  // Check localStorage first
   const localLinks = localStorage.getItem(idLinktree);
   if (localLinks) {
     links = JSON.parse(localLinks);
-    renderLinks();
+    renderLinks(); // Only render the edit panel links
   }
 
-  // Kemudian muat dari server sebagai cadangan/sinkronisasi
-  fetch(`/linktree/get/${idLinktree}`)
-    .then((response) => response.json())
-    .then((data) => {
-      if (data.buttonData && data.buttonData.length > 0) {
-        links = data.buttonData;
-        localStorage.setItem(idLinktree, JSON.stringify(links));
-        renderLinks();
-      }
-    })
-    .catch((error) => {
-      console.error("Error loading linktree data:", error);
+  try {
+    const response = await fetch(`/linktree/get/${idLinktree}`);
+    const data = await response.json();
+
+    if (data.buttonData && data.buttonData.length > 0) {
+      links = data.buttonData;
+      localStorage.setItem(idLinktree, JSON.stringify(links));
+      renderLinks(); // Update edit panel links
+    }
+
+    // Update button data for other scripts
+    const buttonDataEvent = new CustomEvent("buttonDataReceived", {
+      detail: {
+        buttonData: data.btnArray || [],
+        linktreeId: idLinktree,
+      },
     });
+    window.dispatchEvent(buttonDataEvent);
+
+    // Render preview buttons with style data
+    if (data.btnArray && data.style) {
+      await renderButtons(data.btnArray, data.style);
+    }
+  } catch (error) {
+    console.error("Error loading linktree data:", error);
+    alert("Failed to load links. Please try again later.");
+  }
 }
 
-// Panggil fungsi ini saat halaman pertama kali dimuat
-document.addEventListener("DOMContentLoaded", loadLinktreeData);
+// Add this function to load design data from the database
+async function loadDesignData() {
+  const urlParams = new URLSearchParams(window.location.search);
+  const idLinktree = urlParams.get("id");
+
+  if (!idLinktree) {
+    console.error("No Linktree ID found");
+    return;
+  }
+
+  try {
+    const response = await fetch(`/linktree/get/${idLinktree}`);
+    const data = await response.json();
+
+    console.log("Loaded Design Data:", data); // Detailed logging
+
+    if (!data.style) {
+      console.warn("No style data found in response");
+      return;
+    }
+
+    // More robust application of design elements
+    if (data.title) {
+      titleInput.value = data.title;
+      previewUsername.textContent = data.title || "@username";
+    }
+
+    if (data.bio) {
+      bioInput.value = data.bio;
+      document.getElementById("previewBio").textContent = data.bio;
+    }
+
+    // Apply theme with fallback
+    if (data.style.theme) {
+      activeThemeType = data.style.theme.type || "gradient";
+      themeValue[activeThemeType] = data.style.theme.value || {
+        color1: "#4158d0",
+        color2: "#c850c0",
+      };
+      await applyTheme(activeThemeType, themeValue[activeThemeType]);
+    }
+
+    // Profile image handling
+    if (data.style.profileImage) {
+      currentProfileImage = data.style.profileImage;
+      await updateProfileImage(
+        `data:image/jpeg;base64,${data.style.profileImage}`
+      );
+    }
+
+    // More detailed font and style application
+    if (data.style.font) {
+      await changeFont(data.style.font.family || "Inter");
+      const fontColor = data.style.font.color || "#000000";
+      const fontColorPicker = document.getElementById("fontColorPicker");
+      if (fontColorPicker) fontColorPicker.value = fontColor;
+
+      const previewContent = document.getElementById("previewContent");
+      if (previewContent) previewContent.style.color = fontColor;
+    }
+
+    // Button style application
+    if (data.style.buttonStyle) {
+      await changeButtonStyle(data.style.buttonStyle.shape || "standard");
+      await changeButtonColor(data.style.buttonStyle.color || "#007bff");
+    }
+
+    // Render buttons with style data
+    if (data.btnArray) {
+      await renderButtons(data.btnArray, data.style);
+    }
+  } catch (error) {
+    console.error("Comprehensive error in loadDesignData:", error);
+  }
+}
+
+document.addEventListener("DOMContentLoaded", async () => {
+  try {
+    // Clear any existing buttons first
+    const previewLinks = document.getElementById("previewLinks");
+    if (previewLinks) {
+      previewLinks.innerHTML = "";
+    }
+
+    // Load design data first (includes button style and color)
+    await loadDesignData();
+
+    // Then load linktree data (includes buttons)
+    await loadLinktreeData();
+
+    // Initialize other components
+    initializeFonts();
+    initializeBackgroundImages();
+  } catch (error) {
+    console.error("Initialization error:", error);
+  }
+});
 
 function renderLinks() {
   const linksList = document.getElementById("linksList");
-  const previewLinks = document.getElementById("previewLinks");
+  if (!linksList) return;
 
   linksList.innerHTML = "";
-  previewLinks.innerHTML = "";
 
   links.forEach((link, index) => {
-    // Buat elemen kartu link
     const linkItem = document.createElement("div");
     linkItem.className = "card mb-3";
     linkItem.innerHTML = `
@@ -198,15 +309,7 @@ function renderLinks() {
         </div>
       </div>
     `;
-
     linksList.appendChild(linkItem);
-
-    // Buat elemen pratinjau link
-    const previewLink = document.createElement("a");
-    previewLink.href = link.url;
-    previewLink.className = "preview-link";
-    previewLink.innerText = link.title;
-    previewLinks.appendChild(previewLink);
   });
 }
 
@@ -275,52 +378,94 @@ async function fetchLinktreeData() {
     const data = await response.json();
     console.log("Received data:", data);
 
+    // Clear existing buttons before rendering
+    const previewLinks = document.getElementById("previewLinks");
+    if (previewLinks) {
+      previewLinks.innerHTML = "";
+    }
+
     // Broadcast button data to other scripts
     const buttonDataEvent = new CustomEvent("buttonDataReceived", {
       detail: {
-        buttonData: data.buttonData || [],
+        buttonData: data.btnArray || [],
         linktreeId: id,
       },
     });
     window.dispatchEvent(buttonDataEvent);
 
-    // Render tombol berdasarkan data buttonData
-    renderButtons(data.buttonData || []);
+    // Render buttons with style and color
+    if (data.btnArray) {
+      await renderButtons(data.btnArray, data.style);
+    }
   } catch (error) {
     console.error("Error loading buttons:", error);
     alert("Gagal memuat link. Silakan coba lagi nanti.");
   }
 }
 
-function renderButtons(buttonData = []) {
+async function renderButtons(buttonData = [], styleData = {}) {
   const previewLinks = document.getElementById("previewLinks");
-
   if (!previewLinks) {
     console.error("Preview links container not found!");
     return;
   }
 
-  // Bersihkan konten sebelumnya
+  // Clear existing buttons first
   previewLinks.innerHTML = "";
 
-  // Pastikan buttonData adalah array
+  // Ensure buttonData is an array
   if (!Array.isArray(buttonData)) {
     console.error("Invalid button data:", buttonData);
     return;
   }
 
-  buttonData.forEach((button) => {
-    if (!button || !button.title || !button.url) {
+  // Get style information
+  const buttonStyle = styleData.buttonStyle?.shape || "standard";
+  const buttonColor = styleData.buttonStyle?.color || "#007bff";
+
+  // Sort buttons by position
+  const sortedButtons = buttonData.sort(
+    (a, b) => parseInt(a.button_position) - parseInt(b.button_position)
+  );
+
+  for (const button of sortedButtons) {
+    if (!button || !button.button_name) {
       console.warn("Skipping invalid button:", button);
-      return;
+      continue;
     }
 
-    const previewLink = document.createElement("a");
-    previewLink.href = button.url;
-    previewLink.className = "preview-link";
-    previewLink.innerText = button.title;
-    previewLinks.appendChild(previewLink);
-  });
+    try {
+      // Fetch long URL for the short link
+      const response = await fetch(`/shortlink/${button.id_shortlink}`);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch long URL for ${button.id_shortlink}`);
+      }
+
+      const shortlinkData = await response.json();
+
+      const previewLink = document.createElement("a");
+      previewLink.href = shortlinkData.long_url || "#";
+      previewLink.className = "preview-link";
+      previewLink.innerText = button.button_name;
+
+      // Apply styles immediately
+      applyButtonStyle(previewLink, buttonStyle);
+      previewLink.style.backgroundColor = buttonColor;
+
+      // Make sure the link is clickable
+      previewLink.style.cursor = "pointer";
+      previewLink.target = "_blank"; // Open in new tab
+
+      // Add data attributes for tracking
+      previewLink.setAttribute("data-button-style", buttonStyle);
+      previewLink.setAttribute("data-button-color", buttonColor);
+      previewLink.setAttribute("data-shortlink-id", button.id_shortlink);
+
+      previewLinks.appendChild(previewLink);
+    } catch (error) {
+      console.error("Error creating button:", error);
+    }
+  }
 }
 
 // Panggil fetchLinktreeData saat halaman dimuat
@@ -461,27 +606,19 @@ function changeFont(fontFamily) {
 }
 
 // Change font color
-function changeFontColor(color) {
+function changeFont(fontFamily) {
+  if (!fontFamily) return; // Prevent empty value override
+
+  document.querySelectorAll(".font-option").forEach((option) => {
+    option.classList.remove("active");
+    if (option.textContent === fontFamily) {
+      option.classList.add("active");
+    }
+  });
+
   const previewContent = document.getElementById("previewContent");
   if (previewContent) {
-    // Apply to all text elements including username, bio
-    previewContent.style.color = color;
-
-    // Explicitly set color for text elements
-    const textElements = previewContent.querySelectorAll(
-      "#previewUsername, #previewBio, .text-white"
-    );
-    textElements.forEach((element) => {
-      element.style.setProperty("color", color, "important");
-    });
-
-    // Apply to preview links (buttons)
-    const previewLinks = document.querySelectorAll(".preview-link");
-    previewLinks.forEach((link) => {
-      link.style.setProperty("color", color, "important");
-      // Store the color as data attribute for tracking
-      link.setAttribute("data-font-color", color);
-    });
+    previewContent.style.fontFamily = fontFamily;
   }
 }
 
@@ -599,6 +736,7 @@ function applyTheme(type, value) {
       previewContent.style.backgroundColor = value;
       break;
     case "image":
+      // Store only the path/URL of the image
       previewContent.style.backgroundImage = `url('${value}')`;
       previewContent.style.backgroundSize = "cover";
       previewContent.style.backgroundPosition = "center";
@@ -643,31 +781,47 @@ document.addEventListener("DOMContentLoaded", () => {
   applyTheme("gradient", themeValue.gradient);
 });
 
-// Initialize everything when the document is ready
-document.addEventListener("DOMContentLoaded", () => {
-  initializeFonts();
+function initializeBackgroundImages() {
+  const backgroundImages = [
+    "/assets/img/masjid-lh.jpg",
+    "/assets/img/Gedung-H2.jpg",
+    "/assets/img/gedung-h3.jpg",
+  ];
 
-  // Panggil fungsi untuk menginisialisasi background image
+  const backgroundContainer = document.querySelector(".background-options");
+  if (backgroundContainer) {
+    backgroundContainer.innerHTML = "";
+    backgroundImages.forEach((image) => {
+      const imageOption = document.createElement("div");
+      imageOption.className = "background-option";
+      imageOption.style.backgroundImage = `url('${image}')`;
+      imageOption.onclick = () => handleImageSelect(image);
+      backgroundContainer.appendChild(imageOption);
+    });
+  }
+}
+
+// Initialize everything when the document is ready
+document.addEventListener("DOMContentLoaded", async () => {
+  initializeFonts();
   initializeBackgroundImages();
 
-  // Jika ingin set default background
-  if (backgroundImages.length > 0) {
-    changeBackgroundImage(backgroundImages[0]);
+  // Tunggu data selesai di-load
+  await loadDesignData();
+
+  // Hanya set default jika tidak ada data dari database
+  if (!document.getElementById("previewContent").style.backgroundImage) {
+    if (backgroundImages.length > 0) {
+      changeBackgroundImage(backgroundImages[0]);
+    }
+    changeFont("Inter");
+    changeButtonStyle("standard");
+    changeTheme("#4158d0", "#c850c0");
+
+    document.getElementById("gradientColor1").value = "#4158d0";
+    document.getElementById("gradientColor2").value = "#c850c0";
+    document.getElementById("solidColor").value = "#3498db";
   }
-
-  // Set default font
-  changeFont("Inter");
-
-  // Set default button style
-  changeButtonStyle("standard");
-
-  // Set default theme
-  changeTheme("#4158d0", "#c850c0");
-
-  // Initialize color pickers with default values
-  document.getElementById("gradientColor1").value = "#4158d0";
-  document.getElementById("gradientColor2").value = "#c850c0";
-  document.getElementById("solidColor").value = "#3498db";
 });
 
 // Ambil Linktree ID dari localStorage atau URL
@@ -808,22 +962,6 @@ async function collectDesignData() {
       };
     }
 
-    // Handle background image conversion
-    if (activeThemeType === "image") {
-      const imageUrl = themeValue["image"];
-      if (imageUrl && imageUrl.startsWith("/assets/")) {
-        try {
-          // Convert local image URL to base64
-          const response = await fetch(imageUrl);
-          const blob = await response.blob();
-          const base64 = await fileToBase64(blob);
-          themeValue["image"] = `data:${blob.type};base64,${base64}`;
-        } catch (error) {
-          console.error("Error converting background image:", error);
-        }
-      }
-    }
-
     // Button style collection
     const activeButtonStyle = document.querySelector(".block-shape.active");
     const buttonStyleValue = activeButtonStyle
@@ -847,7 +985,6 @@ async function collectDesignData() {
       style: {
         profileImage: profileImageBase64,
         theme: {
-          // Changed from background to theme
           type: activeThemeType,
           value: themeValue[activeThemeType],
         },

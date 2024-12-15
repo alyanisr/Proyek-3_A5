@@ -6,6 +6,8 @@ let currentQRCode = {
   }
 };
 
+let idstyl = null;
+
 // Function to switch between tabs
 function openTab(evt, tabName) {
   var i, tabcontent, tablinks;
@@ -132,8 +134,41 @@ function downloadQRCode() {
 }
 
 async function saveQRCode() {
-  if (currentQRCode.data) {
-    
+  if (idstyl === null) {
+    // New QR code - create a new entry
+    if (currentQRCode.data) {
+      const payload = {
+        imageData: currentQRCode.style.logo,
+        date: new Date().toISOString(),
+        color: currentQRCode.style.color,
+        url: currentQRCode.data.url,
+        title: currentQRCode.data.title
+      };
+      
+      try {
+        const response = await fetch('/qr/saveqr', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(payload)
+        });
+
+        if (response.ok) {
+          alert("QR berhasil disimpan ke database");
+          document.getElementById("qrForm").reset();
+          document.getElementById("inputSection").style.display = "block";
+          document.getElementById("resultSection").style.display = "none";
+        } else {
+          alert("Gagal menyimpan QR code");
+        }
+      } catch (error) {
+        console.error('Error saving QR code:', error);
+        alert("Terjadi kesalahan saat menyimpan QR code");
+      }
+    }
+  } else {
+    // Existing QR code - update the entry
     const payload = {
       imageData: currentQRCode.style.logo,
       date: new Date().toISOString(),
@@ -143,8 +178,8 @@ async function saveQRCode() {
     };
     
     try {
-      const response = await fetch('/qr/saveqr', {
-        method: 'POST',
+      const response = await fetch(`/qr/update/${idstyl}`, {
+        method: 'PATCH',
         headers: {
           'Content-Type': 'application/json'
         },
@@ -152,12 +187,13 @@ async function saveQRCode() {
       });
 
       if (response.ok) {
-        alert("QR berhasil disimpan ke database");
+        alert("QR berhasil di update");
         document.getElementById("qrForm").reset();
         document.getElementById("inputSection").style.display = "block";
         document.getElementById("resultSection").style.display = "none";
+        idstyl = null; // Reset idstyl after successful update
       } else {
-        alert("Gagal menyimpan QR code");
+        alert("Gagal Mengupdate QR code");
       }
     } catch (error) {
       console.error('Error saving QR code:', error);
@@ -261,6 +297,7 @@ async function editHistoryQR(button) {
     const url = historyItem.querySelector(".url").textContent;
     const color = historyItem.dataset.color;
     const logoDataURI = historyItem.dataset.logo;
+    const idqrs = historyItem.dataset.id;
 
     // Switch to Create tab and show result section
     document.getElementById("defaultOpen").click();
@@ -303,6 +340,8 @@ async function editHistoryQR(button) {
         color: color || "#000000",
         logo: data.logo || null
       };
+
+      idstyl = idqrs;
 
       // Display the result
       displayQRResult(data);

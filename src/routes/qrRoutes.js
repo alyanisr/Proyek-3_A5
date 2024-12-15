@@ -21,7 +21,7 @@ routerQr.route("/show")
 routerQr.route("/delete/:id")
     .delete(QrController.deleteQR)
 
-routerQr.route("/update")
+routerQr.route("/update/:id")
     .patch(QrController.updateqr)
 
 
