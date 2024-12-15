@@ -36,7 +36,16 @@ app.use('/account', routerAccount);
 
 app.use('/qr',loginSession, routerQr);
 
-app.use('/linktree', loginSession, routerLinktree);
+app.use('/linktree', (req, res, next) => {
+    console.log(req.baseUrl + req.path);
+    //match for /linktree/get/{id}
+    const pathMatch = /^\/linktree\/get\/[^/]+$/.test(req.baseUrl + req.path);
+    if (req.session.email || req.path === '/room' || pathMatch) {
+        return next();
+    } else {
+        return res.redirect('/account/login');
+    }
+}, routerLinktree);
 
 app.use('/tes',cors(),routerext);
 

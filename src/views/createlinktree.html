@@ -165,7 +165,7 @@
             <button class="edit-button" data-id="${room.id_linktree}">
               <i data-feather="edit"></i> Edit
             </button>
-            <button onclick="deleteRoom('${room.linktree_url}')">
+            <button onclick="deleteRoom('${room.id_linktree}')">
               <i data-feather="trash-2"></i> Delete
             </button>
           </div>
@@ -381,7 +381,7 @@
         }
 
         // Kirim request ke backend untuk menghapus room
-        fetch(`http://localhost:8000/linktree/delete-room/${customUrl}`, {
+        fetch(`http://localhost:8000/linktree/delete/${customUrl}`, {
           method: "DELETE",
         });
       };
