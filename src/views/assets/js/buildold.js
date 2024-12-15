@@ -379,10 +379,12 @@ function deleteLink(index) {
 
     links.splice(index, 1);
 
+    // Update localStorage
     if (idLinktree) {
       localStorage.setItem(idLinktree, JSON.stringify(links));
     }
 
+    // Update both list and preview
     renderLinks();
   }
 }
@@ -731,17 +733,15 @@ function changeFont(fontFamily, fontColor = null) {
 document.addEventListener("DOMContentLoaded", () => {
   const fontColorPicker = document.getElementById("fontColorPicker");
   if (fontColorPicker) {
-    console.log("Font color picker event listener added");
     fontColorPicker.addEventListener("input", function () {
-      console.log("Font color changed to:", this.value);
       const activeFontOption = document.querySelector(".font-option.active");
       const currentFont = activeFontOption
         ? activeFontOption.textContent
         : "Inter";
-      changeFont(currentFont);
+
+      // Call changeFont with current font and new color
+      changeFont(currentFont, this.value);
     });
-  } else {
-    console.error("Font color picker not found!");
   }
 });
 
