@@ -888,7 +888,7 @@ function applyTheme(type, value) {
 
   switch (type) {
     case "gradient":
-      previewContent.style.backgroundImage = `linear-gradient(to bottom, ${value.color1}, ${value.color2})`;
+      previewContent.style.backgroundImage = `linear-gradient(to bottom right, ${value.color1}, ${value.color2})`;
       previewContent.style.backgroundColor = "";
       break;
     case "solid":

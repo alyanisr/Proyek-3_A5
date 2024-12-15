@@ -148,8 +148,15 @@
               body.style.backgroundColor = theme.value;
               break;
             case "gradient":
-              const [color1, color2] = theme.value.split(",");
-              body.style.background = `linear-gradient(to right, ${color1.trim()}, ${color2.trim()})`;
+              let color1, color2;
+              if (typeof theme.value === "object") {
+                color1 = theme.value.color1;
+                color2 = theme.value.color2;
+              } else {
+                // Fallback to old string format
+                [color1, color2] = theme.value.split(",");
+              }
+              body.style.background = `linear-gradient(to bottom right, ${color1.trim()}, ${color2.trim()})`;
               break;
             case "image":
               if (
