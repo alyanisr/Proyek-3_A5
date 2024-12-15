@@ -12,11 +12,20 @@ body {
   line-height: 1.6;
 }
 
+.content {
+  display: block;
+  width: 100%;
+  margin-left: auto;
+  margin-right: auto;
+  margin-top: auto;
+  margin-bottom: auto;
+}
+
 /* Container Styles */
 .qrcode-container {
   width: 100%;
   max-width: 1200px;
-  
+
   margin: 60px auto;
   background-color: white;
   border-radius: 16px;
