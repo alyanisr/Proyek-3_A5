@@ -21,8 +21,8 @@ Linktree.patch = async (title, bio, style, id) => {
 }
 
 Linktree.update = async (field, value, fieldCriteria, valueCriteria) => {
-    const sql = format(`UPDATE linktrees SET %I = ${value} WHERE %I = $1`, field, fieldCriteria);
-    return await pool.query(sql, [valueCriteria]);
+    const sql = format(`UPDATE linktrees SET %I = $1 WHERE %I = $2`, field, fieldCriteria);
+    return await pool.query(sql, [value, valueCriteria]);
 }
 
 Linktree.delete = async (field, value) => {

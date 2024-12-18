@@ -125,8 +125,17 @@ const editLinktreeURL = async (req, res) => {
     //   return;
     // };
 
+    const url = shorten(`http://localhost:8000/linktree/room?id=${id}`, req.session.email, body.url, "linktree");
+
+    if (url === null) {
+      res.status(500).send({
+        msg: "Terjadi kesalahan server",
+      });
+      return;
+    }
+
     await Linktree.update("linktree_url", body.url, "id_linktree", id);
-    res.status(200).send("success");
+    res.status(200).send({msg: "success"});
   } catch (e) {
     console.error("Terjadi error saat mengupdate URL link-in-bio:", e);
     res.status(500).send({
