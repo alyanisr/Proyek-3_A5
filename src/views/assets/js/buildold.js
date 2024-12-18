@@ -1,6 +1,36 @@
 let linkModal = new bootstrap.Modal(document.getElementById("linkModal"));
 let links = [];
 let initialLoad = true;
+let hasUnsavedChanges = false;
+
+// Update theme management
+let activeThemeType = "gradient"; // 'gradient', 'solid', or 'image'
+let themeValue = {
+  gradient: {
+    color1: "#4158d0",
+    color2: "#c850c0",
+  },
+  solid: "#3498db",
+  image: null,
+};
+
+// Track changes on input fields
+["titleInput", "bioInput", "linkTitle", "linkUrl"].forEach((id) => {
+  const element = document.getElementById(id);
+  if (element) {
+    element.addEventListener("input", () => {
+      hasUnsavedChanges = true;
+    });
+  }
+});
+
+// Prevent accidental tab/window close
+window.addEventListener("beforeunload", (e) => {
+  if (hasUnsavedChanges) {
+    e.preventDefault(); // Standard way to show browser's default warning
+    e.returnValue = ""; // Required for Chrome
+  }
+});
 
 document.addEventListener("DOMContentLoaded", async () => {
   const urlParams = new URLSearchParams(window.location.search);
@@ -28,8 +58,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     // Render both the link list and preview buttons
+    await loadDesignData();
     renderLinks();
-    await loadDesignData(); // Load design settings
 
     initialLoad = false;
     initializeBackgroundImages();
@@ -185,7 +215,6 @@ async function loadLinktreeData() {
   }
 }
 
-// Add this function to load design data from the database
 async function loadDesignData() {
   const urlParams = new URLSearchParams(window.location.search);
   const idLinktree = urlParams.get("id");
@@ -197,64 +226,64 @@ async function loadDesignData() {
 
   try {
     const response = await fetch(`/linktree/get/${idLinktree}`);
+    if (!response.ok) {
+      throw new Error("Failed to fetch design data");
+    }
+
     const data = await response.json();
+    console.log("API Data:", data); // Debug: lihat isi data
 
-    console.log("Loaded Design Data:", data); // Detailed logging
-
-    if (!data.style) {
-      console.warn("No style data found in response");
-      return;
+    // Pastikan data font dan style tersedia
+    if (!data || !data.style || !data.style.font) {
+      throw new Error("Incomplete design data from API");
     }
 
-    // More robust application of design elements
-    if (data.title) {
-      titleInput.value = data.title;
-      previewUsername.textContent = data.title || "@username";
+    // Terapkan font style dan color dari database
+    const fontFamily = data.style.font.family || "Inter";
+    const fontColor = data.style.font.color || "#000000";
+
+    // Profile Image Handling
+    if (data.style?.profileImage) {
+      const profileImage = data.style.profileImage;
+
+      // Pastikan profileImage adalah base64 atau URL yang valid
+      if (profileImage) {
+        updateProfileImage(`data:image/jpeg;base64,${profileImage}`);
+
+        // Simpan di window object untuk collectDesignData
+        window.currentProfileImageBase64 = profileImage;
+      }
+    }
+    // Title and Bio
+    const titleInput = document.getElementById("titleInput");
+    const previewUsername = document.getElementById("previewUsername");
+    const bioInput = document.getElementById("bioInput");
+    const previewBio = document.getElementById("previewBio");
+
+    if (titleInput && previewUsername) {
+      titleInput.value = data.title || "My Linktree";
+      previewUsername.textContent = data.title || "My Linktree";
+      previewUsername.style.color = fontColor;
     }
 
-    if (data.bio) {
-      bioInput.value = data.bio;
-      document.getElementById("previewBio").textContent = data.bio;
+    if (bioInput && previewBio) {
+      bioInput.value = data.bio || "Welcome to my links!";
+      previewBio.textContent = data.bio || "Welcome to my links!";
+      previewBio.style.color = fontColor;
     }
 
-    // Apply theme with fallback
-    if (data.style.theme) {
-      activeThemeType = data.style.theme.type || "gradient";
-      themeValue[activeThemeType] = data.style.theme.value || {
-        color1: "#4158d0",
-        color2: "#c850c0",
-      };
-      await applyTheme(activeThemeType, themeValue[activeThemeType]);
+    // Theme
+    if (data.style?.theme) {
+      applyTheme(data.style.theme.type, data.style.theme.value);
     }
 
-    // Profile image handling
-    if (data.style.profileImage) {
-      currentProfileImage = data.style.profileImage;
-      await updateProfileImage(
-        `data:image/jpeg;base64,${data.style.profileImage}`
-      );
-    }
-
-    // Initialize fonts with active font from database
+    // Font
     if (data.style?.font) {
       const fontFamily = data.style.font.family || "Inter";
       const fontColor = data.style.font.color || "#000000";
+      const fontWeight = data.style.font.weight || "normal"; // Pastikan berat font diatur
 
-      // Update font color picker
-      const fontColorPicker = document.getElementById("fontColorPicker");
-      if (fontColorPicker) {
-        fontColorPicker.value = fontColor;
-      }
-
-      // Change font with color
-      changeFont(fontFamily, fontColor);
-    }
-
-    if (data.style && data.style.font && data.style.font.color) {
-      const fontColor = data.style.font.color;
-
-      // Prioritaskan warna dari database
-      changeFontColor(fontColor);
+      changeFont(fontFamily, fontColor, fontWeight);
 
       // Update font color picker
       const fontColorPicker = document.getElementById("fontColorPicker");
@@ -263,29 +292,58 @@ async function loadDesignData() {
       }
     }
 
-    // Button style application
-    // Button style restoration
+    if (data.style?.font?.color) {
+      changeFontColor(data.style.font.color, true);
+    }
+
+    // Button Style
     if (data.style?.buttonStyle) {
-      const buttonStyle = data.style.buttonStyle.shape || "standard";
       const buttonColor = data.style.buttonStyle.color || "#007bff";
+      const buttonShape = data.style.buttonStyle.shape || "standard";
 
-      changeButtonStyle(buttonStyle);
       changeButtonColor(buttonColor);
-
-      // Update UI to reflect database state
-      const styleButton = document.querySelector(
-        `.block-shape[data-style="${buttonStyle}"]`
-      );
-      if (styleButton) styleButton.classList.add("active");
-    }
-
-    // Render buttons with style data
-    if (data.btnArray) {
-      await renderButtons(data.btnArray, data.style);
+      changeButtonStyle(buttonShape);
     }
   } catch (error) {
-    console.error("Comprehensive error in loadDesignData:", error);
+    console.warn("Error loading design data:", error);
+    // Apply default settings
+    applyTheme("gradient", { color1: "#4158d0", color2: "#c850c0" });
+    changeFont("Inter", "#000000");
+    changeButtonStyle("standard");
+    changeButtonColor("#007bff");
   }
+}
+
+function showErrorModal(message, title = "Error") {
+  // Create modal dynamically
+  const modalHtml = `
+    <div class="modal fade" id="errorModal" tabindex="-1">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header bg-danger text-white">
+            <h5 class="modal-title">${title}</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+          </div>
+          <div class="modal-body">
+            <p>${message}</p>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  // Remove existing modal if exists
+  const existingModal = document.getElementById("errorModal");
+  if (existingModal) existingModal.remove();
+
+  // Append new modal to body
+  document.body.insertAdjacentHTML("beforeend", modalHtml);
+
+  const errorModal = new bootstrap.Modal(document.getElementById("errorModal"));
+  errorModal.show();
 }
 
 document.addEventListener("DOMContentLoaded", async () => {
@@ -322,13 +380,17 @@ function renderLinks() {
   if (linksList) {
     linksList.innerHTML = "";
     links.forEach((link, index) => {
+      const truncatedTitle = truncateText(link.title, 50);
       const linkItem = document.createElement("div");
       linkItem.className = "card mb-3";
       linkItem.innerHTML = `
         <div class="card-body d-flex justify-content-between align-items-center">
           <div>
-            <h6 class="mb-0">${link.title}</h6>
-            <small class="text-muted">${link.url}</small>
+            <h6 class="mb-0" title="${link.title}">${truncatedTitle}</h6>
+            <small class="text-muted" title="${link.url}">${truncateText(
+        link.url,
+        50
+      )}</small>
           </div>
           <div>
             <button class="btn btn-sm btn-outline-primary me-2" onclick="showEditLinkModal(${index})">
@@ -367,7 +429,9 @@ function renderLinks() {
     });
   }
 }
-
+function truncateText(text, maxLength) {
+  return text.length > maxLength ? text.substring(0, maxLength) + "..." : text;
+}
 // Ensure buttons are rendered on page load
 document.addEventListener("DOMContentLoaded", () => {
   renderLinks();
@@ -475,21 +539,21 @@ async function renderButtons(btnArray = [], styleData = {}) {
   // Clear existing buttons first
   previewLinks.innerHTML = "";
 
-  // Ensure btnArray is an array
-  if (!Array.isArray(btnArray)) {
-    console.error("Invalid button data:", btnArray);
+  // Jika btnArray kosong atau null, langsung return tanpa error
+  if (!btnArray || btnArray.length === 0) {
     return;
   }
 
   // Default style values
   const defaultButtonStyle = styleData.buttonStyle?.shape || "standard";
   const defaultButtonColor = styleData.buttonStyle?.color || "#007bff";
+  const fontFamily =
+    styleData.font?.family || localStorage.getItem("fontFamily") || "Inter";
+  const fontColor =
+    styleData.font?.color || localStorage.getItem("fontColor") || "#000000";
 
   for (const button of btnArray) {
-    if (!button || !button.button_name) {
-      console.warn("Skipping invalid button:", button);
-      continue;
-    }
+    if (!button?.button_name) continue;
 
     const previewLink = document.createElement("a");
     // Use long_url instead of url, with fallback
@@ -500,6 +564,9 @@ async function renderButtons(btnArray = [], styleData = {}) {
     // Apply default button styles from database
     applyButtonStyle(previewLink, defaultButtonStyle);
     previewLink.style.backgroundColor = defaultButtonColor;
+
+    previewLink.style.fontFamily = fontFamily;
+    previewLink.style.color = fontColor;
 
     previewLink.style.cursor = "pointer";
     previewLink.target = "_blank";
@@ -599,8 +666,15 @@ function updateProfileImage(imageUrl) {
   const profileImage = document.getElementById("profileImage");
   const previewProfileImage = document.getElementById("previewProfileImage");
 
-  if (profileImage) profileImage.src = imageUrl;
-  if (previewProfileImage) previewProfileImage.src = imageUrl;
+  if (profileImage) {
+    profileImage.src = imageUrl;
+    profileImage.style.display = "block"; // Pastikan gambar ditampilkan
+  }
+
+  if (previewProfileImage) {
+    previewProfileImage.src = imageUrl;
+    previewProfileImage.style.display = "block"; // Pastikan gambar ditampilkan
+  }
 }
 
 // Font management
@@ -653,7 +727,7 @@ function initializeFontColor() {
 }
 
 // Change font for preview content
-function changeFontFamily(fontFamily) {
+function changeFontFamily(fontFamily = "Inter") {
   if (!fontFamily) return;
 
   // Update font options active state
@@ -664,10 +738,7 @@ function changeFontFamily(fontFamily) {
     }
   });
 
-  // Persist font in localStorage
-  localStorage.setItem("fontFamily", fontFamily);
-
-  // Apply font family to preview elements
+  // Apply font to preview elements
   const previewLinks = document.querySelectorAll(".preview-link");
   previewLinks.forEach((link) => {
     link.style.fontFamily = fontFamily;
@@ -680,14 +751,68 @@ function changeFontFamily(fontFamily) {
   if (previewBio) previewBio.style.fontFamily = fontFamily;
 }
 
-function changeFont(fontFamily, fontColor = null) {
-  // Change font family
-  changeFontFamily(fontFamily);
+function changeFont(fontFamily, fontColor = "#000000", fontWeight = "normal") {
+  fontFamily = fontFamily || "Inter"; // Default jika tidak ada font
+  fontColor = fontColor || "#000000";
+  fontWeight = fontWeight || "normal";
 
-  // Change font color if provided
-  if (fontColor) {
-    changeFontColor(fontColor);
+  // Ambil elemen-elemen untuk diperbarui
+  const previewUsername = document.getElementById("previewUsername");
+  const previewBio = document.getElementById("previewBio");
+  const previewLinks = document.querySelectorAll(".preview-link");
+
+  // Perbarui font pada elemen username dan bio
+  if (previewUsername) {
+    previewUsername.style.fontFamily = fontFamily;
+    previewUsername.style.color = fontColor;
+    previewUsername.style.fontWeight = fontWeight;
   }
+
+  if (previewBio) {
+    previewBio.style.fontFamily = fontFamily;
+    previewBio.style.color = fontColor;
+    previewBio.style.fontWeight = fontWeight;
+  }
+
+  // Perbarui semua tombol pratinjau
+  previewLinks.forEach((link) => {
+    link.style.fontFamily = fontFamily;
+    link.style.color = fontColor;
+    link.style.fontWeight = fontWeight;
+
+    // Pastikan hover, klik, dan fokus mengikuti font
+    link.addEventListener("mouseenter", () => {
+      link.style.fontFamily = fontFamily;
+      link.style.color = fontColor;
+    });
+
+    link.addEventListener("mouseleave", () => {
+      link.style.fontFamily = fontFamily;
+      link.style.color = fontColor;
+    });
+
+    link.addEventListener("mousedown", () => {
+      link.style.fontWeight = "bold"; // Tambahkan efek bold pada klik
+    });
+
+    link.addEventListener("mouseup", () => {
+      link.style.fontWeight = fontWeight; // Kembalikan ke berat font default
+    });
+
+    link.addEventListener("focus", () => {
+      link.style.fontFamily = fontFamily;
+      link.style.color = fontColor;
+    });
+
+    link.addEventListener("blur", () => {
+      link.style.fontFamily = fontFamily;
+      link.style.color = fontColor;
+    });
+  });
+
+  // Simpan font dan warna ke localStorage untuk persistensi
+  localStorage.setItem("fontFamily", fontFamily);
+  localStorage.setItem("fontColor", fontColor);
 }
 
 document.addEventListener("DOMContentLoaded", async () => {
@@ -722,16 +847,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 });
 
-document.addEventListener("DOMContentLoaded", () => {
-  const fontColorPicker = document.getElementById("fontColorPicker");
-  if (fontColorPicker) {
-    fontColorPicker.addEventListener("input", (e) => {
-      const currentFont = localStorage.getItem("fontFamily") || "Inter";
-      changeFont(currentFont, e.target.value);
-    });
-  }
-});
-
 document.addEventListener("DOMContentLoaded", async () => {
   try {
     // Tunggu data dari database
@@ -749,24 +864,30 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     // Apply font dan color, pastikan menggunakan warna dari database
     changeFont(storedFont, finalFontColor);
+    await loadDesignData();
   } catch (error) {
     console.error("Error initializing fonts:", error);
   }
 });
 
-function changeFontColor(color) {
-  if (!color) return;
+function changeFontColor(color, fromDatabase = false) {
+  color = color || "#000000"; // Gunakan warna default jika tidak tersedia
 
-  // Simpan warna di localStorage
-  localStorage.setItem("fontColor", color);
-
-  // Update color picker
-  const fontColorPicker = document.getElementById("fontColorPicker");
-  if (fontColorPicker) {
-    fontColorPicker.value = color;
+  if (fromDatabase) {
+    // Simpan status warna dari database ke localStorage
+    localStorage.setItem("fontColorFromDatabase", color);
   }
 
-  // Apply color ke semua elemen preview
+  // Tentukan warna akhir
+  const finalColor = color;
+
+  // Perbarui color picker jika ada
+  const fontColorPicker = document.getElementById("fontColorPicker");
+  if (fontColorPicker) {
+    fontColorPicker.value = finalColor;
+  }
+
+  // Terapkan warna ke elemen pratinjau
   const previewElements = [
     document.getElementById("previewUsername"),
     document.getElementById("previewBio"),
@@ -775,9 +896,39 @@ function changeFontColor(color) {
 
   previewElements.forEach((element) => {
     if (element) {
-      element.style.color = color;
+      element.style.color = finalColor;
     }
   });
+
+  // Simpan warna akhir
+  localStorage.setItem("fontColor", finalColor);
+}
+
+// Tambahkan event listener untuk color picker
+document.addEventListener("DOMContentLoaded", () => {
+  const fontColorPicker = document.getElementById("fontColorPicker");
+  if (fontColorPicker) {
+    fontColorPicker.addEventListener("input", (e) => {
+      // Saat user memilih warna sendiri, nonaktifkan mode dari database
+      localStorage.removeItem("fontColorFromDatabase");
+      changeFontColor(e.target.value);
+    });
+  }
+});
+
+// Pastikan inisialisasi font color saat load
+document.addEventListener("DOMContentLoaded", async () => {
+  try {
+    // Tunggu data dari database
+    await loadDesignData();
+  } catch (error) {
+    console.error("Error initializing font color:", error);
+  }
+});
+
+// When loading from database
+if (data.style?.font?.color) {
+  changeFontColor(data.style.font.color, true);
 }
 
 // Button style management
@@ -867,19 +1018,10 @@ function updateActiveThemeSection() {
   });
 }
 
-// Update theme management
-let activeThemeType = "gradient"; // 'gradient', 'solid', or 'image'
-let themeValue = {
-  gradient: {
-    color1: "#4158d0",
-    color2: "#c850c0",
-  },
-  solid: "#3498db",
-  image: null,
-};
-
 // Update the applyTheme function
 function applyTheme(type, value) {
+  type = type || "gradient";
+
   const previewContent = document.getElementById("previewContent");
   if (!previewContent) return;
 
@@ -888,25 +1030,62 @@ function applyTheme(type, value) {
 
   switch (type) {
     case "gradient":
-      previewContent.style.backgroundImage = `linear-gradient(to bottom right, ${value.color1}, ${value.color2})`;
+      // Ensure two colors are provided for gradient
+      const color1 = value.color1 || "#4158d0";
+      const color2 = value.color2 || "#c850c0";
+      previewContent.style.backgroundImage = `linear-gradient(to bottom right, ${color1}, ${color2})`;
       previewContent.style.backgroundColor = "";
-      break;
-    case "solid":
-      previewContent.style.backgroundImage = "none";
-      previewContent.style.backgroundColor = value;
-      break;
-    case "image":
-      // Store only the path/URL of the image
-      previewContent.style.backgroundImage = `url('${value}')`;
       previewContent.style.backgroundSize = "cover";
-      previewContent.style.backgroundPosition = "center";
-      previewContent.style.backgroundColor = "";
       break;
+
+    case "solid":
+      // Use provided color or default
+      const solidColor = value || "#3498db";
+      previewContent.style.backgroundImage = "none";
+      previewContent.style.backgroundColor = solidColor;
+      break;
+
+    case "image":
+      // Validate image URL
+      if (value && typeof value === "string") {
+        previewContent.style.backgroundImage = `url('${value}')`;
+        previewContent.style.backgroundSize = "cover";
+        previewContent.style.backgroundPosition = "center";
+        previewContent.style.backgroundColor = "";
+      }
+      break;
+
+    default:
+      // Fallback to default gradient
+      previewContent.style.backgroundImage =
+        "linear-gradient(to bottom right, #4158d0, #c850c0)";
   }
 
+  // Update UI to reflect current theme type
   updateActiveThemeSection();
 }
 
+function updateActiveThemeSection() {
+  const sections = {
+    gradient: document.getElementById("gradientSection"),
+    solid: document.getElementById("solidSection"),
+    image: document.getElementById("imageSection"),
+  };
+
+  // Reset all sections
+  Object.keys(sections).forEach((type) => {
+    if (sections[type]) {
+      sections[type].classList.remove("active-section");
+    }
+  });
+
+  // Activate current theme section
+  if (sections[activeThemeType]) {
+    sections[activeThemeType].classList.add("active-section");
+  }
+}
+
+// Handle gradient theme selection
 // Handle gradient theme selection
 function handleGradientSelect(color1, color2) {
   applyTheme("gradient", { color1, color2 });
@@ -920,6 +1099,27 @@ function handleSolidSelect(color) {
 // Handle image selection
 function handleImageSelect(imageUrl) {
   applyTheme("image", imageUrl);
+}
+
+// Background image initialization
+function initializeBackgroundImages() {
+  const backgroundImages = [
+    "/assets/img/masjid-lh.jpg",
+    "/assets/img/Gedung-H2.jpg",
+    "/assets/img/gedung-h3.jpg",
+  ];
+
+  const backgroundContainer = document.querySelector(".background-options");
+  if (backgroundContainer) {
+    backgroundContainer.innerHTML = "";
+    backgroundImages.forEach((image) => {
+      const imageOption = document.createElement("div");
+      imageOption.className = "background-option";
+      imageOption.style.backgroundImage = `url('${image}')`;
+      imageOption.onclick = () => handleImageSelect(image);
+      backgroundContainer.appendChild(imageOption);
+    });
+  }
 }
 
 // Custom gradient input handler
@@ -940,26 +1140,6 @@ document.addEventListener("DOMContentLoaded", () => {
   // Set default theme
   applyTheme("gradient", themeValue.gradient);
 });
-
-function initializeBackgroundImages() {
-  const backgroundImages = [
-    "/assets/img/masjid-lh.jpg",
-    "/assets/img/Gedung-H2.jpg",
-    "/assets/img/gedung-h3.jpg",
-  ];
-
-  const backgroundContainer = document.querySelector(".background-options");
-  if (backgroundContainer) {
-    backgroundContainer.innerHTML = "";
-    backgroundImages.forEach((image) => {
-      const imageOption = document.createElement("div");
-      imageOption.className = "background-option";
-      imageOption.style.backgroundImage = `url('${image}')`;
-      imageOption.onclick = () => handleImageSelect(image);
-      backgroundContainer.appendChild(imageOption);
-    });
-  }
-}
 
 // Initialize everything when the document is ready
 document.addEventListener("DOMContentLoaded", async () => {
@@ -1051,7 +1231,8 @@ async function saveChanges() {
     );
 
     if (response.ok) {
-      alert("Perubahan berhasil disimpan!");
+      hasUnsavedChanges = false;
+      showSuccessModal("Changes saved successfully!");
     } else {
       const errorText = await response.text();
       throw new Error(`Save failed: ${errorText}`);
@@ -1062,107 +1243,92 @@ async function saveChanges() {
   }
 }
 
+function showSuccessModal(message) {
+  const modalHtml = `
+    <div class="modal fade" id="successModal" tabindex="-1">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header bg-success text-white">
+            <h5 class="modal-title">Success</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+          </div>
+          <div class="modal-body">
+            <p>${message}</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  document.body.insertAdjacentHTML("beforeend", modalHtml);
+  const successModal = new bootstrap.Modal(
+    document.getElementById("successModal")
+  );
+  successModal.show();
+}
+
 async function collectDesignData() {
   try {
-    // Tambahkan pengecekan elemen
+    // Ensure all required elements exist
     const titleInput = document.getElementById("titleInput");
     const bioInput = document.getElementById("bioInput");
     const previewContent = document.getElementById("previewContent");
-    const previewLinks = document.querySelector(".preview-link");
+    const fontColorPicker = document.getElementById("fontColorPicker");
 
-    const profileImageInput = document.getElementById("profileImageInput");
-    // Profile Image Handling
-    let profileImageBase64 = null;
-
-    // Prioritas:
-    // 1. Resize gambar yang baru diunggah
-    // 2. Gunakan base64 yang sudah tersimpan
-    // 3. Gunakan gambar profil saat ini
-    if (profileImageInput && profileImageInput.files.length > 0) {
-      const file = profileImageInput.files[0];
-      profileImageBase64 = await fileToBase64(file);
-    } else if (window.currentProfileImageBase64) {
-      profileImageBase64 = window.currentProfileImageBase64;
-    } else if (currentProfileImage) {
-      profileImageBase64 = currentProfileImage;
+    // Validate existence of critical elements
+    if (!titleInput || !bioInput || !previewContent || !fontColorPicker) {
+      throw new Error("Required design elements are missing");
     }
 
-    if (!titleInput || !bioInput || !previewContent) {
-      throw new Error("Required design elements not found");
-    }
-
-    // Background data collection
-    let backgroundData = {};
-    const gradientColor1 = document.getElementById("gradientColor1");
-    const gradientColor2 = document.getElementById("gradientColor2");
-    const solidColor = document.getElementById("solidColor");
-
-    if (previewContent.style.backgroundImage) {
-      const selectedBgUrl = previewContent.style.backgroundImage.replace(
-        /url\(['"](.+)['"]\)/,
-        "$1"
-      );
-
-      backgroundData = {
-        type: "background-image",
-        value: selectedBgUrl,
-      };
-    } else if (previewContent.style.background.includes("gradient")) {
-      backgroundData = {
-        type: "gradient-color",
-        value: {
-          color1: gradientColor1 ? gradientColor1.value : "#4158d0",
-          color2: gradientColor2 ? gradientColor2.value : "#c850c0",
-        },
-      };
-    } else {
-      backgroundData = {
-        type: "solid-color",
-        value: solidColor ? solidColor.value : "#3498db",
-      };
-    }
-
-    // Button style collection
-    const activeButtonStyle = document.querySelector(".block-shape.active");
-    const buttonStyleValue = activeButtonStyle
-      ? activeButtonStyle.getAttribute("data-style") || "standard"
-      : "standard";
-
-    // Button color collection
-    const buttonColor = previewLinks
-      ? previewLinks.style.backgroundColor || "#007bff"
-      : "#007bff";
-
-    // Font collection
-    const activeFontOption = document.querySelector(".font-option.active");
-    const fontFamily = activeFontOption
-      ? activeFontOption.textContent
-      : "Inter";
+    // Ensure activeThemeType and themeValue are defined with defaults
+    const themeData = {
+      type: activeThemeType,
+      value: themeValue[activeThemeType],
+    };
 
     const designData = {
-      title: titleInput.value || "",
-      bio: bioInput.value || "",
+      title: titleInput.value || "My Linktree",
+      bio: bioInput.value || "Welcome to my links!",
       style: {
-        profileImage: profileImageBase64,
         theme: {
           type: activeThemeType,
           value: themeValue[activeThemeType],
         },
-        buttonStyle: {
-          shape: buttonStyleValue,
-          color: buttonColor,
-        },
         font: {
-          family: fontFamily,
-          color: document.querySelector("#fontColorPicker").value || "#000000", // Add font color
+          family: localStorage.getItem("fontFamily") || "Inter",
+          color: fontColorPicker.value || "#000000",
         },
+        buttonStyle: {
+          color: localStorage.getItem("buttonColor") || "#007bff",
+          shape: localStorage.getItem("buttonStyle") || "standard",
+        },
+        profileImage: window.currentProfileImageBase64 || null,
       },
     };
 
     return designData;
   } catch (error) {
-    console.error("Error collecting design data:", error);
-    throw error;
+    console.warn("Minor error collecting design data:", error);
+    // Return a default design data object without throwing an error
+    return {
+      title: "My Linktree",
+      bio: "Welcome to my links!",
+      style: {
+        theme: {
+          type: "gradient",
+          value: { color1: "#4158d0", color2: "#c850c0" },
+        },
+        font: {
+          family: "Inter",
+          color: "#000000",
+        },
+        buttonStyle: {
+          color: "#007bff",
+          shape: "standard",
+        },
+        profileImage: window.currentProfileImageBase64 || null,
+      },
+    };
   }
 }
 
@@ -1266,10 +1432,124 @@ async function urlToBase64(url) {
   });
 }
 
+// // Modifikasi event listener
+// document.addEventListener("DOMContentLoaded", function () {
+//   const editUrlButtons = document.querySelectorAll(".edit-url-btn");
+//   editUrlButtons.forEach((button) => {
+//     button.addEventListener("click", showEditUrlModal);
+//   });
+
+//   const updateUrlButton = document.getElementById("updateUrlButton");
+//   if (updateUrlButton) {
+//     updateUrlButton.addEventListener("click", updateLinktreeUrl);
+//   }
+// });
+
+// function showEditUrlModal(event) {
+//   try {
+//     // Dapatkan tombol Edit URL yang diklik
+//     const editButton = event.target;
+
+//     // Ambil ID dari tombol Edit URL
+//     const linktreeId = editButton.getAttribute("data-id");
+//     if (!linktreeId) {
+//       console.error("Linktree ID not found");
+//       return;
+//     }
+
+//     // Set data-id pada tombol Update URL di modal
+//     const updateButton = document.querySelector("#editUrlModal .btn-primary");
+//     if (updateButton) {
+//       updateButton.setAttribute("data-id", linktreeId);
+//     }
+
+//     // Tampilkan modal
+//     if (typeof bootstrap !== "undefined" && bootstrap.Modal) {
+//       const editUrlModal = new bootstrap.Modal(
+//         document.getElementById("editUrlModal")
+//       );
+//       editUrlModal.show();
+//     } else {
+//       console.error("Bootstrap Modal is not loaded");
+//       alert("Unable to open modal. Please check your bootstrap library.");
+//     }
+//   } catch (error) {
+//     console.error("Error showing modal:", error);
+//     alert("An error occurred while opening the modal.");
+//   }
+// }
+
+// function updateLinktreeUrl() {
+//   // Ambil URL saat ini
+//   const currentUrl = window.location.href;
+
+//   // Ekstrak ID dari query parameter
+//   const urlParams = new URLSearchParams(window.location.search);
+//   const linktreeId = urlParams.get("id");
+
+//   if (!linktreeId) {
+//     alert("Invalid linktree ID");
+//     return;
+//   }
+
+//   const newUrlInput = document.getElementById("newLinktreeUrl");
+//   if (!newUrlInput || !newUrlInput.value) {
+//     alert("Please enter a valid URL");
+//     return;
+//   }
+
+//   const newUrl = newUrlInput.value;
+
+//   fetch(`/linktree/edit-url?id=${linktreeId}`, {
+//     method: "PATCH",
+//     headers: {
+//       "Content-Type": "application/json",
+//     },
+//     body: JSON.stringify({ url: newUrl }),
+//   })
+//     .then((response) => {
+//       if (!response.ok) {
+//         throw new Error(`HTTP error! status: ${response.status}`);
+//       }
+//       return response.json();
+//     })
+//     .then((data) => {
+//       alert("URL updated successfully");
+//       const editUrlModal = bootstrap.Modal.getInstance(
+//         document.getElementById("editUrlModal")
+//       );
+//       if (editUrlModal) {
+//         editUrlModal.hide();
+//       }
+//     })
+//     .catch((error) => {
+//       console.error("Full error:", error);
+//       alert(`Error: ${error.message}`);
+//     });
+// }
+
 // Tambahkan event listener untuk menyimpan perubahan
 document.addEventListener("DOMContentLoaded", () => {
   const saveButton = document.getElementById("saveChangesButton"); // Pastikan ada tombol dengan ID ini di HTML
   if (saveButton) {
     saveButton.addEventListener("click", saveChanges);
   }
+});
+document.addEventListener("DOMContentLoaded", () => {
+  // Gradient color inputs
+  const gradientColor1 = document.getElementById("gradientColor1");
+  const gradientColor2 = document.getElementById("gradientColor2");
+  if (gradientColor1 && gradientColor2) {
+    gradientColor1.addEventListener("input", handleGradientSelect);
+    gradientColor2.addEventListener("input", handleGradientSelect);
+  }
+
+  // Solid color input
+  const solidColor = document.getElementById("solidColor");
+  if (solidColor) {
+    solidColor.addEventListener("input", handleSolidSelect);
+  }
+
+  // Initialize background images
+  initializeBackgroundImages();
 });

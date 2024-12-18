@@ -5,7 +5,7 @@
   border-radius: 30px;
   overflow: hidden;
   position: fixed;
-  right: 100px; /* Geser lebih ke kiri */
+  right: 150px; /* Geser lebih ke kiri */
   top: 50%;
   transform: translateY(-50%);
 }
@@ -32,13 +32,13 @@
 }
 
 .logo-sidebar {
-  width: 50px; /* Adjust size as needed */
-  height: 50px; /* Adjust size as needed */
+  width: 48px; /* Adjust size as needed */
+  height: 48px; /* Adjust size as needed */
   border-radius: 50%; /* Creates a perfectly circular shape */
   object-fit: cover; /* Ensures the image fills the circle without distortion */
   position: fixed; /* Or absolute, depending on your layout */
   top: 15px; /* Adjust distance from top */
-  left: 15px; /* Adjust distance from left */
+  left: 7px; /* Adjust distance from left */
   z-index: 1000; /* Ensures it stays on top of other elements */
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2); /* Optional: adds a subtle shadow */
   cursor: pointer; /* Optional: changes cursor on hover */
@@ -94,8 +94,8 @@
 
 .save-changes-btn {
   position: fixed;
-  top: 10px;
-  right: 20px;
+  top: 20px;
+  right: 45px;
   padding: 10px 20px;
   background-color: #4caf50;
   color: white;
@@ -339,20 +339,6 @@
   gap: 0.5rem;
 }
 
-/* .theme-option {
-  width: 60px;
-  height: 60px;
-  border-radius: 8px;
-  cursor: pointer;
-  border: 2px solid transparent;
-  transition: all 0.2s ease;
-}
-
-.theme-option:hover {
-  transform: scale(1.05);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-} */
-
 .theme-option.active {
   border-color: #007bff;
 }
@@ -401,4 +387,21 @@
 
 .custom-input button:hover {
   background-color: #0056b3;
+}
+
+.edit-url-btn {
+  position: fixed;
+  top: 20px; /* Mengubah dari bottom ke top */
+  right: 210px; /* Mengubah dari left ke right */
+  background-color: #6c757d;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  padding: 10px 15px;
+  cursor: pointer;
+  z-index: 1000;
+}
+
+.edit-url-btn:hover {
+  background-color: #5a6268;
 }
