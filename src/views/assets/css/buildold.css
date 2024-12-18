@@ -339,20 +339,6 @@
   gap: 0.5rem;
 }
 
-/* .theme-option {
-  width: 60px;
-  height: 60px;
-  border-radius: 8px;
-  cursor: pointer;
-  border: 2px solid transparent;
-  transition: all 0.2s ease;
-}
-
-.theme-option:hover {
-  transform: scale(1.05);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-} */
-
 .theme-option.active {
   border-color: #007bff;
 }
