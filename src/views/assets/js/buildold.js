@@ -279,7 +279,11 @@ async function loadDesignData() {
 
     // Font
     if (data.style?.font) {
-      changeFont(fontFamily, fontColor);
+      const fontFamily = data.style.font.family || "Inter";
+      const fontColor = data.style.font.color || "#000000";
+      const fontWeight = data.style.font.weight || "normal"; // Pastikan berat font diatur
+
+      changeFont(fontFamily, fontColor, fontWeight);
 
       // Update font color picker
       const fontColorPicker = document.getElementById("fontColorPicker");
@@ -747,31 +751,36 @@ function changeFontFamily(fontFamily = "Inter") {
   if (previewBio) previewBio.style.fontFamily = fontFamily;
 }
 
-function changeFont(fontFamily, fontColor = "#000000") {
-  fontFamily = fontFamily || "Inter"; // Gunakan default jika font tidak ada
+function changeFont(fontFamily, fontColor = "#000000", fontWeight = "normal") {
+  fontFamily = fontFamily || "Inter"; // Default jika tidak ada font
   fontColor = fontColor || "#000000";
+  fontWeight = fontWeight || "normal";
 
-  // Elemen-elemen pratinjau
+  // Ambil elemen-elemen untuk diperbarui
   const previewUsername = document.getElementById("previewUsername");
   const previewBio = document.getElementById("previewBio");
   const previewLinks = document.querySelectorAll(".preview-link");
 
+  // Perbarui font pada elemen username dan bio
   if (previewUsername) {
     previewUsername.style.fontFamily = fontFamily;
     previewUsername.style.color = fontColor;
+    previewUsername.style.fontWeight = fontWeight;
   }
 
   if (previewBio) {
     previewBio.style.fontFamily = fontFamily;
     previewBio.style.color = fontColor;
+    previewBio.style.fontWeight = fontWeight;
   }
 
-  // Terapkan gaya dinamis pada semua link
+  // Perbarui semua tombol pratinjau
   previewLinks.forEach((link) => {
     link.style.fontFamily = fontFamily;
     link.style.color = fontColor;
+    link.style.fontWeight = fontWeight;
 
-    // Hover
+    // Pastikan hover, klik, dan fokus mengikuti font
     link.addEventListener("mouseenter", () => {
       link.style.fontFamily = fontFamily;
       link.style.color = fontColor;
@@ -782,20 +791,14 @@ function changeFont(fontFamily, fontColor = "#000000") {
       link.style.color = fontColor;
     });
 
-    // Klik (aktif)
     link.addEventListener("mousedown", () => {
-      link.style.fontFamily = fontFamily;
-      link.style.color = fontColor;
-      link.style.fontWeight = "bold"; // Berikan efek bold jika perlu
+      link.style.fontWeight = "bold"; // Tambahkan efek bold pada klik
     });
 
     link.addEventListener("mouseup", () => {
-      link.style.fontFamily = fontFamily;
-      link.style.color = fontColor;
-      link.style.fontWeight = "normal"; // Kembalikan ke normal
+      link.style.fontWeight = fontWeight; // Kembalikan ke berat font default
     });
 
-    // Fokus
     link.addEventListener("focus", () => {
       link.style.fontFamily = fontFamily;
       link.style.color = fontColor;
@@ -807,7 +810,7 @@ function changeFont(fontFamily, fontColor = "#000000") {
     });
   });
 
-  // Simpan ke localStorage
+  // Simpan font dan warna ke localStorage untuk persistensi
   localStorage.setItem("fontFamily", fontFamily);
   localStorage.setItem("fontColor", fontColor);
 }
@@ -1429,101 +1432,101 @@ async function urlToBase64(url) {
   });
 }
 
-// Modifikasi event listener
-document.addEventListener("DOMContentLoaded", function () {
-  const editUrlButtons = document.querySelectorAll(".edit-url-btn");
-  editUrlButtons.forEach((button) => {
-    button.addEventListener("click", showEditUrlModal);
-  });
+// // Modifikasi event listener
+// document.addEventListener("DOMContentLoaded", function () {
+//   const editUrlButtons = document.querySelectorAll(".edit-url-btn");
+//   editUrlButtons.forEach((button) => {
+//     button.addEventListener("click", showEditUrlModal);
+//   });
 
-  const updateUrlButton = document.getElementById("updateUrlButton");
-  if (updateUrlButton) {
-    updateUrlButton.addEventListener("click", updateLinktreeUrl);
-  }
-});
+//   const updateUrlButton = document.getElementById("updateUrlButton");
+//   if (updateUrlButton) {
+//     updateUrlButton.addEventListener("click", updateLinktreeUrl);
+//   }
+// });
 
-function showEditUrlModal(event) {
-  try {
-    // Dapatkan tombol Edit URL yang diklik
-    const editButton = event.target;
+// function showEditUrlModal(event) {
+//   try {
+//     // Dapatkan tombol Edit URL yang diklik
+//     const editButton = event.target;
 
-    // Ambil ID dari tombol Edit URL
-    const linktreeId = editButton.getAttribute("data-id");
-    if (!linktreeId) {
-      console.error("Linktree ID not found");
-      return;
-    }
+//     // Ambil ID dari tombol Edit URL
+//     const linktreeId = editButton.getAttribute("data-id");
+//     if (!linktreeId) {
+//       console.error("Linktree ID not found");
+//       return;
+//     }
 
-    // Set data-id pada tombol Update URL di modal
-    const updateButton = document.querySelector("#editUrlModal .btn-primary");
-    if (updateButton) {
-      updateButton.setAttribute("data-id", linktreeId);
-    }
+//     // Set data-id pada tombol Update URL di modal
+//     const updateButton = document.querySelector("#editUrlModal .btn-primary");
+//     if (updateButton) {
+//       updateButton.setAttribute("data-id", linktreeId);
+//     }
 
-    // Tampilkan modal
-    if (typeof bootstrap !== "undefined" && bootstrap.Modal) {
-      const editUrlModal = new bootstrap.Modal(
-        document.getElementById("editUrlModal")
-      );
-      editUrlModal.show();
-    } else {
-      console.error("Bootstrap Modal is not loaded");
-      alert("Unable to open modal. Please check your bootstrap library.");
-    }
-  } catch (error) {
-    console.error("Error showing modal:", error);
-    alert("An error occurred while opening the modal.");
-  }
-}
+//     // Tampilkan modal
+//     if (typeof bootstrap !== "undefined" && bootstrap.Modal) {
+//       const editUrlModal = new bootstrap.Modal(
+//         document.getElementById("editUrlModal")
+//       );
+//       editUrlModal.show();
+//     } else {
+//       console.error("Bootstrap Modal is not loaded");
+//       alert("Unable to open modal. Please check your bootstrap library.");
+//     }
+//   } catch (error) {
+//     console.error("Error showing modal:", error);
+//     alert("An error occurred while opening the modal.");
+//   }
+// }
 
-function updateLinktreeUrl() {
-  // Ambil URL saat ini
-  const currentUrl = window.location.href;
+// function updateLinktreeUrl() {
+//   // Ambil URL saat ini
+//   const currentUrl = window.location.href;
 
-  // Ekstrak ID dari query parameter
-  const urlParams = new URLSearchParams(window.location.search);
-  const linktreeId = urlParams.get("id");
+//   // Ekstrak ID dari query parameter
+//   const urlParams = new URLSearchParams(window.location.search);
+//   const linktreeId = urlParams.get("id");
 
-  if (!linktreeId) {
-    alert("Invalid linktree ID");
-    return;
-  }
+//   if (!linktreeId) {
+//     alert("Invalid linktree ID");
+//     return;
+//   }
 
-  const newUrlInput = document.getElementById("newLinktreeUrl");
-  if (!newUrlInput || !newUrlInput.value) {
-    alert("Please enter a valid URL");
-    return;
-  }
+//   const newUrlInput = document.getElementById("newLinktreeUrl");
+//   if (!newUrlInput || !newUrlInput.value) {
+//     alert("Please enter a valid URL");
+//     return;
+//   }
 
-  const newUrl = newUrlInput.value;
+//   const newUrl = newUrlInput.value;
 
-  fetch(`/linktree/edit-url?id=${linktreeId}`, {
-    method: "PATCH",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ url: newUrl }),
-  })
-    .then((response) => {
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      return response.json();
-    })
-    .then((data) => {
-      alert("URL updated successfully");
-      const editUrlModal = bootstrap.Modal.getInstance(
-        document.getElementById("editUrlModal")
-      );
-      if (editUrlModal) {
-        editUrlModal.hide();
-      }
-    })
-    .catch((error) => {
-      console.error("Full error:", error);
-      alert(`Error: ${error.message}`);
-    });
-}
+//   fetch(`/linktree/edit-url?id=${linktreeId}`, {
+//     method: "PATCH",
+//     headers: {
+//       "Content-Type": "application/json",
+//     },
+//     body: JSON.stringify({ url: newUrl }),
+//   })
+//     .then((response) => {
+//       if (!response.ok) {
+//         throw new Error(`HTTP error! status: ${response.status}`);
+//       }
+//       return response.json();
+//     })
+//     .then((data) => {
+//       alert("URL updated successfully");
+//       const editUrlModal = bootstrap.Modal.getInstance(
+//         document.getElementById("editUrlModal")
+//       );
+//       if (editUrlModal) {
+//         editUrlModal.hide();
+//       }
+//     })
+//     .catch((error) => {
+//       console.error("Full error:", error);
+//       alert(`Error: ${error.message}`);
+//     });
+// }
 
 // Tambahkan event listener untuk menyimpan perubahan
 document.addEventListener("DOMContentLoaded", () => {
